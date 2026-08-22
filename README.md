@@ -1,13 +1,61 @@
-# Sasha's Pazzle
+<p align="center">
+  <img src="docs/icon.png" width="128" alt="App icon">
+</p>
 
-A native Apple jigsaw puzzle for **macOS, iPadOS and iOS**, written in Swift 6 and
-SwiftUI. The Xcode target, scheme and bundle identifier stay `JigsawPuzzle` —
-only the name the app shows on screen is *Sasha's Pazzle*. Real interlocking piece geometry, real drag-and-drop, real groups —
-from a 12-piece warm-up to an 800-piece project. No web view, no backend, no
-network access of any kind.
+<h1 align="center">Sasha's Pazzle</h1>
 
 <p align="center">
-  <em>580 built-in pictures · 12 – 1000 pieces · works entirely offline</em>
+  A native Apple jigsaw puzzle for <b>macOS, iPadOS and iOS</b>, written in Swift 6 and SwiftUI.<br>
+  Real interlocking piece geometry, real drag-and-drop, real groups —<br>
+  from a 12-piece warm-up to an 800-piece project.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/platforms-macOS%2015%20%7C%20iOS%2018%20%7C%20iPadOS%2018-1B7FD1" alt="Platforms">
+  <img src="https://img.shields.io/badge/Swift-6.0-F05138" alt="Swift 6.0">
+  <img src="https://img.shields.io/badge/Xcode-16%2B-147EFB" alt="Xcode 16+">
+  <img src="https://img.shields.io/badge/tests-53%20passing-3FB950" alt="53 tests passing">
+  <img src="https://img.shields.io/badge/dependencies-none-8B949E" alt="No dependencies">
+  <img src="https://img.shields.io/badge/offline-100%25-8B949E" alt="Works offline">
+</p>
+
+<p align="center">
+  <b>580 built-in pictures · 12 – 1000 pieces · no web view, no backend, no network access of any kind</b>
+</p>
+
+The Xcode target, scheme and bundle identifier stay `JigsawPuzzle`; only the name
+the app shows on screen is *Sasha's Pazzle*.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/mac-board.jpg" width="88%" alt="Assembling a board on macOS">
+</p>
+
+<p align="center">
+  <em>macOS — connected pieces become a group and move as one; the faint guide
+  underneath can be switched off</em>
+</p>
+
+<table>
+<tr>
+<td width="58%"><img src="docs/mac-800-pieces.jpg" alt="800-piece mode"></td>
+<td width="42%"><img src="docs/ipad-library.jpg" alt="Picture library on iPad"></td>
+</tr>
+<tr>
+<td align="center"><em>Nightmare mode — 805 pieces, cut in a tenth of a second</em></td>
+<td align="center"><em>The library: 580 generated pictures plus your own photos</em></td>
+</tr>
+</table>
+
+<p align="center">
+  <img src="docs/iphone-board.jpg" width="230" alt="iPhone">
+</p>
+
+<p align="center">
+  <em>iPhone — board on top, tray along the bottom, actions collapsed into a menu</em>
 </p>
 
 ---
