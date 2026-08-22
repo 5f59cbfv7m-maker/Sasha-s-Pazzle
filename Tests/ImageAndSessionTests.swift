@@ -1,0 +1,299 @@
+import CoreGraphics
+import Foundation
+import Testing
+@testable import JigsawPuzzle
+
+@Suite("Images, artwork and rendering")
+struct ImageTests {
+
+    private func makeImage(width: Int, height: Int) -> RenderedImage {
+        let context = ArtToolkit.makeContext(size: CGSize(width: width, height: height))!
+        context.setFillColor(CGColor(red: 0.2, green: 0.5, blue: 0.8, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        return RenderedImage(cgImage: context.makeImage()!)
+    }
+
+    @Test("Cropping keeps the aspect and never stretches")
+    func cropProducesRequestedAspect() {
+        let wide = makeImage(width: 400, height: 200)     // 2:1
+        let square = ImagePipeline.crop(wide, toAspect: 1)
+        #expect(square.width == 200 && square.height == 200)
+
+        let tall = makeImage(width: 200, height: 600)     // 1:3
+        let landscape = ImagePipeline.crop(tall, toAspect: 3.0 / 2.0)
+        #expect(abs(landscape.aspect - 1.5) < 0.02)
+        #expect(landscape.width <= tall.width && landscape.height <= tall.height)
+    }
+
+    @Test("A nil aspect leaves the picture untouched")
+    func cropWithoutAspectIsIdentity() {
+        let image = makeImage(width: 333, height: 211)
+        let result = ImagePipeline.crop(image, toAspect: nil)
+        #expect(result.width == 333 && result.height == 211)
+    }
+
+    @Test("Resize hits the requested pixel size")
+    func resizeIsExact() {
+        let image = makeImage(width: 400, height: 300)
+        let resized = ImagePipeline.resize(image, to: CGSize(width: 120, height: 90))
+        #expect(resized.width == 120 && resized.height == 90)
+    }
+
+    @Test("Encoding and decoding a photo round trips through disk")
+    func writeAndDecode() throws {
+        let directory = URL.temporaryDirectory.appending(path: "JigsawImg-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appending(path: "photo.jpg")
+
+        try ImagePipeline.write(makeImage(width: 800, height: 500), to: url)
+        #expect(FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+        #expect(ImagePipeline.dimensions(url: url) == CGSize(width: 800, height: 500))
+
+        let decoded = try ImagePipeline.decode(url: url, maxPixelSize: 200)
+        #expect(max(decoded.width, decoded.height) <= 200, "decoding must downsample")
+        #expect(abs(decoded.aspect - 1.6) < 0.05)
+    }
+
+    @Test("An unreadable file reports an error instead of crashing")
+    func decodeFailsGracefully() {
+        #expect(throws: (any Error).self) {
+            try ImagePipeline.decode(data: Data("definitely not an image".utf8), maxPixelSize: 100)
+        }
+    }
+
+    @Test("Every artwork family renders and is reproducible")
+    func artworkIsDeterministic() {
+        let size = CGSize(width: 200, height: 140)
+        for family in ArtFamily.allCases {
+            let first = ArtRenderer.render(family: family, variant: 2, size: size)
+            #expect(first != nil, "\(family) produced no image")
+            #expect(first?.width == 200 && first?.height == 140)
+        }
+        let a = ArtRenderer.render(family: .nebula, variant: 3, size: size)!
+        let b = ArtRenderer.render(family: .nebula, variant: 3, size: size)!
+        #expect(pixels(of: a) == pixels(of: b), "the same seed must repaint the same picture")
+
+        let c = ArtRenderer.render(family: .nebula, variant: 4, size: size)!
+        #expect(pixels(of: a) != pixels(of: c), "different variants must differ")
+    }
+
+    @Test("Generated pictures carry enough local detail to be solvable")
+    func artworkHasLocalContrast() {
+        // A puzzle made of flat colour is unsolvable, so every family must vary
+        // within a piece-sized window.
+        let size = CGSize(width: 320, height: 220)
+        for family in ArtFamily.allCases {
+            let image = ArtRenderer.render(family: family, variant: 5, size: size)!
+            let data = pixels(of: image)
+            let bytesPerRow = image.bytesPerRow
+            var flatTiles = 0, tiles = 0
+            for tileY in stride(from: 0, to: 200, by: 20) {
+                for tileX in stride(from: 0, to: 300, by: 20) {
+                    var low = 255, high = 0
+                    for y in tileY..<(tileY + 20) {
+                        for x in tileX..<(tileX + 20) {
+                            let index = y * bytesPerRow + x * 4
+                            guard index + 2 < data.count else { continue }
+                            let luma = (Int(data[index]) + Int(data[index + 1]) + Int(data[index + 2])) / 3
+                            low = min(low, luma)
+                            high = max(high, luma)
+                        }
+                    }
+                    tiles += 1
+                    if high - low < 6 { flatTiles += 1 }
+                }
+            }
+            #expect(Double(flatTiles) / Double(tiles) < 0.35,
+                    "\(family): \(flatTiles)/\(tiles) tiles are flat")
+        }
+    }
+
+    @Test("Piece textures cover the whole outline at the right scale")
+    func textureRendering() {
+        let geometry = PuzzleGeometry(columns: 6, rows: 4, aspect: 1.5, seed: 4242)
+        let source = ArtRenderer.render(family: .mosaic, variant: 1,
+                                        size: CGSize(width: 900, height: 600))!
+        let scale = PieceTextureStore.affordableScale(for: geometry, desired: 2)
+        let textures = PieceTextureStore.render(pieces: Array(0..<geometry.pieceCount),
+                                                geometry: geometry,
+                                                source: RenderedImage(cgImage: source),
+                                                pixelScale: scale, outlines: true)
+        #expect(textures.count == geometry.pieceCount)
+        for piece in 0..<geometry.pieceCount {
+            let bounds = geometry.localBounds(of: piece)
+            let image = try! #require(textures[piece])
+            #expect(abs(Double(image.width) - Double(bounds.width * scale)) <= 2)
+            #expect(abs(Double(image.height) - Double(bounds.height * scale)) <= 2)
+        }
+    }
+
+    @Test("The texture budget lowers the scale instead of exhausting memory")
+    func textureBudgetIsRespected() {
+        let small = PuzzleGeometry(columns: 4, rows: 3, aspect: 1.5, seed: 1)
+        let huge = PuzzleGeometry(columns: 40, rows: 30, aspect: 1.5, seed: 1)
+        #expect(PieceTextureStore.affordableScale(for: small, desired: 3) >= 2)
+
+        let hugeScale = PieceTextureStore.affordableScale(for: huge, desired: 3)
+        let cell = huge.cellSize
+        let overhang = huge.maximumOverhang * 2
+        let pixels = Double((cell.width + overhang) * (cell.height + overhang))
+            * Double(huge.pieceCount) * Double(hugeScale * hugeScale)
+        #expect(pixels <= PieceTextureStore.pixelBudget * 1.05)
+    }
+
+    private func pixels(of image: CGImage) -> Data {
+        (image.dataProvider?.data as Data?) ?? Data()
+    }
+}
+
+@Suite("Session, clock and undo")
+@MainActor
+struct SessionTests {
+
+    /// Sessions under test write to a throwaway directory so running the suite
+    /// never disturbs the player's real saved games.
+    private func makeSession(pieces: Int = 24) -> GameSession {
+        let directory = URL.temporaryDirectory.appending(path: "JigsawSession-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let item = LibraryCatalog.builtIn()[0]
+        return GameSession(item: item, aspect: .landscape32, targetPieces: pieces, seed: 4242,
+                           saveStore: SaveStore(directory: directory))
+    }
+
+    @Test("A new session is consistent before anything is loaded")
+    func initialSessionState() {
+        let session = makeSession()
+        #expect(session.phase == .preparing)
+        #expect(session.elapsed == 0)
+        #expect(session.pieceCount == session.geometry.pieceCount)
+        #expect(session.placedCount == 0)
+        #expect(!session.canUndo && !session.canRedo)
+        #expect(session.tableRect.contains(session.boardRect))
+    }
+
+    @Test("The clock measures real elapsed time and stops when paused")
+    func clockTracksRealTime() async throws {
+        let session = makeSession()
+        session.startForTesting()
+        #expect(session.phase == .playing)
+
+        // Compare against the wall clock rather than a fixed window: the test
+        // machine may be loaded, and the point is that the timer follows real
+        // time rather than frames or ticks.
+        let started = Date.now
+        try await Task.sleep(for: .milliseconds(600))
+        // Pausing recomputes the exact interval, independent of the 250 ms ticker.
+        session.pause()
+        let wallClock = Date.now.timeIntervalSince(started)
+        #expect(session.phase == .paused)
+        let atPause = session.elapsed
+        #expect(abs(atPause - wallClock) < 0.2, "measured \(atPause) against \(wallClock)")
+        #expect(atPause >= 0.55)
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(abs(session.elapsed - atPause) < 0.05, "the clock must not run while paused")
+
+        session.resume()
+        try await Task.sleep(for: .milliseconds(400))
+        session.pause()
+        #expect(session.elapsed > atPause + 0.3, "the clock must resume")
+    }
+
+    @Test("Leaving the foreground pauses the game")
+    func backgroundPauses() {
+        let session = makeSession()
+        session.startForTesting()
+        session.handleBackground()
+        #expect(session.phase == .paused)
+    }
+
+    @Test("Undo restores the previous placement, redo puts it back")
+    func undoRedoRoundTrip() {
+        let session = makeSession()
+        session.startForTesting()
+
+        _ = session.placePieceFromTray(0, at: CGPoint(x: 40, y: 40),
+                                       viewScale: 1, assist: .precise)
+        let afterFirst = session.state
+        #expect(session.canUndo)
+
+        _ = session.placePieceFromTray(1, at: CGPoint(x: 900, y: 900),
+                                       viewScale: 1, assist: .precise)
+        #expect(session.state.placedCount == 2)
+
+        session.undo()
+        #expect(session.state.placedCount == 1)
+        #expect(session.state == afterFirst)
+        #expect(session.canRedo)
+
+        session.redo()
+        #expect(session.state.placedCount == 2)
+    }
+
+    @Test("Undo also reverses a merge")
+    func undoReversesMerge() {
+        let session = makeSession()
+        session.startForTesting()
+        let cell = session.geometry.cellSize
+
+        _ = session.placePieceFromTray(0, at: CGPoint(x: cell.width / 2, y: cell.height / 2),
+                                       viewScale: 1, assist: .generous)
+        _ = session.placePieceFromTray(1, at: CGPoint(x: cell.width * 1.5, y: cell.height / 2),
+                                       viewScale: 1, assist: .generous)
+        #expect(session.state.groups.count == 1, "the two pieces should have joined")
+
+        session.undo()
+        #expect(session.state.placedCount == 1)
+        #expect(session.state.groups.count == 1)
+    }
+
+    @Test("A hint points at a piece without solving anything")
+    func hintDoesNotSolve() {
+        let session = makeSession()
+        session.startForTesting()
+        let before = session.state
+        session.requestHint()
+        #expect(session.hint != nil)
+        #expect(session.state == before, "a hint must never move a piece")
+    }
+
+    @Test("Solving marks the session complete and stops the clock")
+    func solvingCompletes() async throws {
+        let session = makeSession(pieces: 12)
+        session.startForTesting()
+        session.solveImmediately()
+
+        #expect(session.phase == .completed)
+        #expect(session.state.isComplete)
+        let atFinish = session.elapsed
+        try await Task.sleep(for: .milliseconds(350))
+        #expect(abs(session.elapsed - atFinish) < 0.05)
+    }
+
+    @Test("A snapshot captures everything needed to resume")
+    func snapshotRestoresSession() {
+        let session = makeSession(pieces: 48)
+        session.startForTesting()
+        _ = session.placePieceFromTray(3, at: CGPoint(x: 120, y: 90), viewScale: 1, assist: .standard)
+
+        let snapshot = session.snapshot()
+        let directory = URL.temporaryDirectory.appending(path: "JigsawRestore-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let restored = GameSession(snapshot: snapshot, saveStore: SaveStore(directory: directory))
+
+        #expect(restored.id == session.id)
+        #expect(restored.geometry.columns == session.geometry.columns)
+        #expect(restored.geometry.rows == session.geometry.rows)
+        #expect(restored.state == session.state)
+        #expect(restored.geometry.outline(of: 5)[1].sampled()
+                == session.geometry.outline(of: 5)[1].sampled())
+    }
+
+    @Test("Scatter empties the tray onto the table")
+    func scatterFromSession() {
+        let session = makeSession(pieces: 48)
+        session.startForTesting()
+        session.scatterTray()
+        #expect(session.state.trayOrder.isEmpty)
+        #expect(session.placedCount == session.pieceCount)
+    }
+}
