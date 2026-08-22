@@ -15,6 +15,9 @@ Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
 `name=iPad Pro 13-inch (M5)`. **53 tests in 6 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
+`./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
+onto the Desktop (or wherever) so it can be launched without Xcode.
+
 The product is named `Sasha's Pazzle.app` (`PRODUCT_NAME`), but the Swift module
 and every import stay `JigsawPuzzle` (`PRODUCT_MODULE_NAME`). Do not "fix" that
 mismatch — it is deliberate.

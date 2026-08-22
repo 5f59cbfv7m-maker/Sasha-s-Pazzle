@@ -85,6 +85,25 @@ From the command line:
 xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle -destination 'platform=macOS,arch=arm64' build
 ```
 
+### Installing it as a normal Mac app
+
+To get an icon you can double-click instead of launching from Xcode every time:
+
+```bash
+./Scripts/install-mac.sh                 # onto the Desktop
+./Scripts/install-mac.sh /Applications   # into Launchpad and Spotlight
+```
+
+That builds the Release configuration — noticeably faster than Debug, since the
+procedural artwork is arithmetic-heavy — and copies the bundle out of
+`DerivedData`. The bundle identifier does not change, so saved games and
+imported photos carry over. Re-run the script after any change to refresh the
+installed copy.
+
+The macOS build is signed ad-hoc, which is enough to run on the machine that
+built it. Sharing that `.app` with someone else needs a Developer ID certificate
+and notarisation.
+
 ```bash
 xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle -destination 'platform=macOS,arch=arm64' test
 ```
