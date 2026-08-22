@@ -1,7 +1,8 @@
-# Jigsaw Puzzle
+# Sasha's Pazzle
 
 A native Apple jigsaw puzzle for **macOS, iPadOS and iOS**, written in Swift 6 and
-SwiftUI. Real interlocking piece geometry, real drag-and-drop, real groups —
+SwiftUI. The Xcode target, scheme and bundle identifier stay `JigsawPuzzle` —
+only the name the app shows on screen is *Sasha's Pazzle*. Real interlocking piece geometry, real drag-and-drop, real groups —
 from a 12-piece warm-up to an 800-piece project. No web view, no backend, no
 network access of any kind.
 

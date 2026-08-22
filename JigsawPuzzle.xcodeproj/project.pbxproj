@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		AA00000000000000000000C1 /* JigsawPuzzle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JigsawPuzzle.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00000000000000000000C1 /* Sasha's Pazzle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Sasha's Pazzle.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA00000000000000000000C2 /* JigsawPuzzleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JigsawPuzzleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA00000000000000000000C3 /* JigsawPuzzle.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JigsawPuzzle.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -56,7 +56,7 @@
 		AA00000000000000000000B2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AA00000000000000000000C1 /* JigsawPuzzle.app */,
+				AA00000000000000000000C1 /* Sasha's Pazzle.app */,
 				AA00000000000000000000C2 /* JigsawPuzzleTests.xctest */,
 			);
 			name = Products;
@@ -92,7 +92,7 @@
 			packageProductDependencies = (
 			);
 			productName = JigsawPuzzle;
-			productReference = AA00000000000000000000C1 /* JigsawPuzzle.app */;
+			productReference = AA00000000000000000000C1 /* Sasha's Pazzle.app */;
 			productType = "com.apple.product-type.application";
 		};
 		AA00000000000000000000D2 /* JigsawPuzzleTests */ = {
@@ -300,7 +300,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Jigsaw Puzzle";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sasha's Pazzle";
+				INFOPLIST_KEY_CFBundleName = "Sasha's Pazzle";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Sample project. No warranty.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Jigsaw Puzzle needs access to your photo library so you can turn your own photos into puzzles.";
@@ -320,7 +321,10 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.JigsawPuzzle;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				// The bundle is named for the player; the Swift module keeps its
+				// original name so no source or test import has to change.
+				PRODUCT_MODULE_NAME = JigsawPuzzle;
+				PRODUCT_NAME = "Sasha's Pazzle";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -343,7 +347,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Jigsaw Puzzle";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sasha's Pazzle";
+				INFOPLIST_KEY_CFBundleName = "Sasha's Pazzle";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Sample project. No warranty.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Jigsaw Puzzle needs access to your photo library so you can turn your own photos into puzzles.";
@@ -363,7 +368,10 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.JigsawPuzzle;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				// The bundle is named for the player; the Swift module keeps its
+				// original name so no source or test import has to change.
+				PRODUCT_MODULE_NAME = JigsawPuzzle;
+				PRODUCT_NAME = "Sasha's Pazzle";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -388,9 +396,9 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				"TEST_HOST[sdk=iphoneos*]" = "$(BUILT_PRODUCTS_DIR)/JigsawPuzzle.app/JigsawPuzzle";
-				"TEST_HOST[sdk=iphonesimulator*]" = "$(BUILT_PRODUCTS_DIR)/JigsawPuzzle.app/JigsawPuzzle";
-				"TEST_HOST[sdk=macosx*]" = "$(BUILT_PRODUCTS_DIR)/JigsawPuzzle.app/Contents/MacOS/JigsawPuzzle";
+				"TEST_HOST[sdk=iphoneos*]" = "$(BUILT_PRODUCTS_DIR)/Sasha's Pazzle.app/Sasha's Pazzle";
+				"TEST_HOST[sdk=iphonesimulator*]" = "$(BUILT_PRODUCTS_DIR)/Sasha's Pazzle.app/Sasha's Pazzle";
+				"TEST_HOST[sdk=macosx*]" = "$(BUILT_PRODUCTS_DIR)/Sasha's Pazzle.app/Contents/MacOS/Sasha's Pazzle";
 			};
 			name = Debug;
 		};
@@ -409,9 +417,9 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				"TEST_HOST[sdk=iphoneos*]" = "$(BUILT_PRODUCTS_DIR)/JigsawPuzzle.app/JigsawPuzzle";
-				"TEST_HOST[sdk=iphonesimulator*]" = "$(BUILT_PRODUCTS_DIR)/JigsawPuzzle.app/JigsawPuzzle";
-				"TEST_HOST[sdk=macosx*]" = "$(BUILT_PRODUCTS_DIR)/JigsawPuzzle.app/Contents/MacOS/JigsawPuzzle";
+				"TEST_HOST[sdk=iphoneos*]" = "$(BUILT_PRODUCTS_DIR)/Sasha's Pazzle.app/Sasha's Pazzle";
+				"TEST_HOST[sdk=iphonesimulator*]" = "$(BUILT_PRODUCTS_DIR)/Sasha's Pazzle.app/Sasha's Pazzle";
+				"TEST_HOST[sdk=macosx*]" = "$(BUILT_PRODUCTS_DIR)/Sasha's Pazzle.app/Contents/MacOS/Sasha's Pazzle";
 			};
 			name = Release;
 		};
