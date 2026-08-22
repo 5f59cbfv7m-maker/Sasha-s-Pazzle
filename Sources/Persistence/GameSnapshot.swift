@@ -1,0 +1,79 @@
+import CoreGraphics
+import Foundation
+
+/// Everything needed to resume a game, and nothing more.
+///
+/// Geometry is *not* stored: `seed`, `columns` and `rows` regenerate the exact
+/// same Bézier edges on any device. A 800-piece save is therefore a few tens of
+/// kilobytes rather than megabytes of control points.
+nonisolated struct GameSnapshot: Codable, Sendable, Identifiable {
+    static let currentVersion = 1
+
+    var version: Int = GameSnapshot.currentVersion
+    var id: String
+    var itemID: String
+    var itemTitle: String
+    var source: ImageSource
+    var imageAspect: CGFloat
+    var puzzleAspect: PuzzleAspect
+    var targetPieces: Int
+    var columns: Int
+    var rows: Int
+    var seed: UInt64
+    var elapsed: TimeInterval
+    var state: PuzzleState
+    var updatedAt: Date
+    var isComplete: Bool
+
+    var pieceCount: Int { columns * rows }
+
+    var libraryItem: LibraryItem {
+        LibraryItem(id: itemID, title: itemTitle,
+                    category: source.isUserPhoto ? .mine : .abstract,
+                    source: source, addedAt: .distantPast, aspect: imageAspect)
+    }
+}
+
+/// Reads and writes saved games as one small JSON file.
+///
+/// Deliberately not a database: a puzzle save is a single document that is
+/// rewritten wholesale, and an atomic file write is both faster and far harder
+/// to corrupt than a partially-migrated store.
+nonisolated struct SaveStore: Sendable {
+    private let url: URL
+
+    init(directory: URL = PhotoLibraryStore.containerDirectory) {
+        self.url = directory.appending(path: "savedGames.json")
+    }
+
+    private struct Archive: Codable {
+        var version = 1
+        var games: [GameSnapshot]
+    }
+
+    func load() -> [GameSnapshot] {
+        guard let data = try? Data(contentsOf: url),
+              let archive = try? JSONDecoder().decode(Archive.self, from: data) else { return [] }
+        return archive.games
+            .filter { $0.version <= GameSnapshot.currentVersion }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    /// Inserts or replaces one game, keeping the most recent `limit` entries.
+    func save(_ snapshot: GameSnapshot, limit: Int = 12) throws {
+        var games = load().filter { $0.id != snapshot.id }
+        games.insert(snapshot, at: 0)
+        try write(Array(games.prefix(limit)))
+    }
+
+    func delete(id: String) throws {
+        try write(load().filter { $0.id != id })
+    }
+
+    func deleteAll() throws { try write([]) }
+
+    private func write(_ games: [GameSnapshot]) throws {
+        let data = try JSONEncoder().encode(Archive(games: games))
+        try data.write(to: url, options: .atomic)
+    }
+}
