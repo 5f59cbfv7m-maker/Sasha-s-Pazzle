@@ -53,11 +53,6 @@ final class AppModel {
         path = [.game]
     }
 
-    /// Wipes generated-art and thumbnail caches. Exposed for the debug driver.
-    func clearImageCaches() {
-        Task { await ImageStore.shared.purgeMemory() }
-    }
-
     func resume(_ snapshot: GameSnapshot) {
         // A user photo may have been deleted since the game was saved.
         if case let .imported(fileName) = snapshot.source,

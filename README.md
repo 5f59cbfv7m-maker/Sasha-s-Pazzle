@@ -270,7 +270,7 @@ resizing are handled by the same code path as rotation.
 
 ## Tests
 
-`Tests/` contains **51 tests in 5 suites** (Swift Testing), covering the areas the
+`Tests/` contains **53 tests in 6 suites** (Swift Testing), covering the areas the
 engine cannot be allowed to get wrong:
 
 grid selection · edge generation · edge matching between neighbours · flat
@@ -278,7 +278,8 @@ borders · closed, non-self-intersecting outlines · determinism from a seed ·
 coordinates · snap calculation and tolerance scaling · group merge · four-way
 bridging · group movement · completion detection · shuffle · scatter · the real
 clock · undo/redo · save/load and serialisation · image crop, resize and decode ·
-artwork determinism and local contrast · texture rendering and the memory budget.
+artwork determinism and local contrast · texture rendering and the memory budget ·
+photo import, reload and deletion.
 
 ```bash
 xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
@@ -294,8 +295,8 @@ launch so screens can be photographed reproducibly:
 open -n /path/to/JigsawPuzzle.app --args --stage huge --clear-saves
 ```
 
-Stages: `library`, `dark`, `setup`, `board`, `scattered`, `snapped`, `hint`,
-`completed`, `huge`, `hugeSolved`.
+Stages: `library`, `dark`, `settings`, `setup`, `board`, `scattered`, `snapped`,
+`hint`, `completed`, `huge`, `hugeSolved`.
 
 ## Known limitations
 

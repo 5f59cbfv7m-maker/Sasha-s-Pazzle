@@ -55,7 +55,6 @@ nonisolated struct PuzzleState: Sendable, Codable, Equatable {
     /// Number of pieces that sit in a cluster of two or more.
     var connectedCount: Int { groups.values.reduce(0) { $0 + ($1.members.count > 1 ? $1.members.count : 0) } }
     var isComplete: Bool { trayOrder.isEmpty && groups.count == 1 }
-    var largestGroupSize: Int { groups.values.map(\.members.count).max() ?? 0 }
 
     init(columns: Int, rows: Int, cellSize: CGSize) {
         self.columns = columns

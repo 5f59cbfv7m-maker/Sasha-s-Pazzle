@@ -32,13 +32,6 @@ struct ImageTests {
         #expect(result.width == 333 && result.height == 211)
     }
 
-    @Test("Resize hits the requested pixel size")
-    func resizeIsExact() {
-        let image = makeImage(width: 400, height: 300)
-        let resized = ImagePipeline.resize(image, to: CGSize(width: 120, height: 90))
-        #expect(resized.width == 120 && resized.height == 90)
-    }
-
     @Test("Encoding and decoding a photo round trips through disk")
     func writeAndDecode() throws {
         let directory = URL.temporaryDirectory.appending(path: "JigsawImg-\(UUID().uuidString)")

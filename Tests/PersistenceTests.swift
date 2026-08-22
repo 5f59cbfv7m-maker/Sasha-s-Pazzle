@@ -124,3 +124,74 @@ struct PersistenceTests {
         }
     }
 }
+
+@Suite("Photo library", .serialized)
+@MainActor
+struct PhotoLibraryTests {
+
+    private func sampleJPEG(width: Int, height: Int) throws -> Data {
+        let context = try #require(ArtToolkit.makeContext(size: CGSize(width: width, height: height)))
+        context.setFillColor(CGColor(red: 0.9, green: 0.3, blue: 0.2, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let image = RenderedImage(cgImage: try #require(context.makeImage()))
+        let url = URL.temporaryDirectory.appending(path: "sample-\(UUID().uuidString).jpg")
+        try ImagePipeline.write(image, to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        return try Data(contentsOf: url)
+    }
+
+    /// Exercises the real import path end to end — decode, copy into the
+    /// container, index, reload from disk, then delete — so the "Add Photo"
+    /// button cannot silently be a no-op.
+    @Test("Importing a photo stores it, indexes it and survives a reload")
+    func importPersistsAndDeletes() throws {
+        let store = PhotoLibraryStore()
+        let before = store.userItems.count
+
+        let item = try #require(store.importPhoto(data: try sampleJPEG(width: 640, height: 480),
+                                                  suggestedTitle: "Unit Test Photo"))
+        defer { store.delete(item) }
+
+        #expect(store.userItems.count == before + 1)
+        #expect(item.isUserPhoto)
+        #expect(abs(item.aspect - 4.0 / 3.0) < 0.02)
+
+        guard case let .imported(fileName) = item.source else {
+            Issue.record("imported photos must reference a file")
+            return
+        }
+        let url = try #require(PhotoLibraryStore.photoURL(fileName: fileName))
+        #expect(FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+
+        // A fresh store reads the manifest back from disk.
+        let reloaded = PhotoLibraryStore()
+        #expect(reloaded.userItems.contains { $0.id == item.id })
+        #expect(reloaded.items(in: .mine).contains { $0.id == item.id })
+
+        store.rename(item, to: "Renamed")
+        #expect(PhotoLibraryStore().userItems.first { $0.id == item.id }?.title == "Renamed")
+    }
+
+    @Test("Deleting a photo removes both the index entry and the file")
+    func deleteRemovesFile() throws {
+        let store = PhotoLibraryStore()
+        let item = try #require(store.importPhoto(data: try sampleJPEG(width: 300, height: 300),
+                                                  suggestedTitle: nil))
+        guard case let .imported(fileName) = item.source else { return }
+
+        store.delete(item)
+        #expect(!store.userItems.contains { $0.id == item.id })
+        #expect(PhotoLibraryStore.photoURL(fileName: fileName) == nil)
+        #expect(!PhotoLibraryStore().userItems.contains { $0.id == item.id })
+    }
+
+    @Test("Rubbish data is rejected without crashing")
+    func rejectsNonImageData() {
+        let store = PhotoLibraryStore()
+        let before = store.userItems.count
+        #expect(store.importPhoto(data: Data(repeating: 0x42, count: 512),
+                                  suggestedTitle: nil) == nil)
+        #expect(store.userItems.count == before)
+        #expect(store.lastError != nil)
+    }
+}

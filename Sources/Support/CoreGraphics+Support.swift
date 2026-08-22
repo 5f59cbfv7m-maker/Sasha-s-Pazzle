@@ -9,7 +9,6 @@ nonisolated extension CGPoint {
 
     var magnitude: CGFloat { (x * x + y * y).squareRoot() }
     func distance(to other: CGPoint) -> CGFloat { (self - other).magnitude }
-    var asSize: CGSize { CGSize(width: x, height: y) }
 
     func isApproximatelyEqual(to other: CGPoint, tolerance: CGFloat = 1e-6) -> Bool {
         abs(x - other.x) <= tolerance && abs(y - other.y) <= tolerance
@@ -19,7 +18,6 @@ nonisolated extension CGPoint {
 nonisolated extension CGSize {
     static func * (lhs: CGSize, rhs: CGFloat) -> CGSize { CGSize(width: lhs.width * rhs, height: lhs.height * rhs) }
     var aspect: CGFloat { height > 0 ? width / height : 1 }
-    var asPoint: CGPoint { CGPoint(x: width, y: height) }
     var minimumSide: CGFloat { Swift.min(width, height) }
 }
 

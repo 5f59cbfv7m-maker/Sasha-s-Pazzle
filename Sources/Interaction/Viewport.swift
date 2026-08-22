@@ -25,12 +25,6 @@ nonisolated struct Viewport: Sendable, Equatable {
         CGRect(origin: screen(rect.origin), size: CGSize(width: rect.width * scale, height: rect.height * scale))
     }
 
-    /// The board-space region currently visible in a view of `size`.
-    func visibleBoardRect(viewSize: CGSize) -> CGRect {
-        CGRect(origin: board(.zero),
-               size: CGSize(width: viewSize.width / scale, height: viewSize.height / scale))
-    }
-
     /// Fits `content` inside `viewSize` with a margin, centred.
     static func fitting(content: CGRect, in viewSize: CGSize, padding: CGFloat = 24) -> Viewport {
         guard content.width > 0, content.height > 0, viewSize.width > 0, viewSize.height > 0 else {

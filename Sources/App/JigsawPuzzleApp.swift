@@ -9,7 +9,12 @@ struct JigsawPuzzleApp: App {
             RootView()
                 .environment(model)
                 .environment(model.settings)
-                .frame(minWidth: 640, minHeight: 460)
+                // A minimum size is a *window* constraint. Applying it on iOS
+                // forces the layout wider than a phone screen, pushing the HUD
+                // and the toolbar off both edges.
+                #if os(macOS)
+                .frame(minWidth: 620, minHeight: 460)
+                #endif
         }
         .commands { GameCommands(model: model) }
         #if os(macOS)

@@ -11,6 +11,9 @@ struct GameView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.displayScale) private var displayScale
     @Environment(\.scenePhase) private var scenePhase
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
 
     private var controller: BoardInputController { model.boardController }
     @State private var trayDrag: TrayDrag?
@@ -90,7 +93,7 @@ struct GameView: View {
                     } action: { boardFrame = $0 }
                 }
             }
-            .overlay(alignment: .topLeading) { statusBar.padding(12) }
+            .overlay(alignment: .bottomLeading) { statusBar.padding(12) }
             .overlay(alignment: .bottomTrailing) { zoomControls.padding(12) }
     }
 
@@ -109,22 +112,48 @@ struct GameView: View {
         }
     }
 
+    /// Clock and progress. `ViewThatFits` drops to a stacked form rather than
+    /// being clipped when the board is only a phone wide.
     private var statusBar: some View {
-        HStack(spacing: 14) {
-            Label(TimeFormatting.clock(session.elapsed), systemImage: "clock")
-                .monospacedDigit()
-                .accessibilityLabel(Text("Elapsed time"))
-                .accessibilityValue(Text(TimeFormatting.spoken(session.elapsed)))
-            Divider().frame(height: 14)
-            Label("\(session.placedCount)/\(session.pieceCount)", systemImage: "puzzlepiece")
-                .monospacedDigit()
-                .accessibilityLabel(Text("Pieces placed"))
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) {
+                clockLabel
+                Divider().frame(height: 14)
+                progressLabel
+                solveProgress
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                clockLabel
+                progressLabel
+            }
         }
         .font(.callout.weight(.medium))
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .background(.regularMaterial, in: Capsule())
         .overlay(Capsule().stroke(.primary.opacity(0.08)))
+    }
+
+    private var clockLabel: some View {
+        Label(TimeFormatting.clock(session.elapsed), systemImage: "clock")
+            .monospacedDigit()
+            .accessibilityLabel(Text("Elapsed time"))
+            .accessibilityValue(Text(TimeFormatting.spoken(session.elapsed)))
+    }
+
+    /// Fraction of pieces that are joined to at least one neighbour — a truer
+    /// measure of progress than "taken out of the tray".
+    private var solveProgress: some View {
+        ProgressView(value: session.completion)
+            .progressViewStyle(.linear)
+            .frame(width: 72)
+            .accessibilityLabel(Text("Pieces placed"))
+    }
+
+    private var progressLabel: some View {
+        Label("\(session.placedCount)/\(session.pieceCount)", systemImage: "puzzlepiece")
+            .monospacedDigit()
+            .accessibilityLabel(Text("Pieces placed"))
     }
 
     private var zoomControls: some View {
@@ -148,20 +177,55 @@ struct GameView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        // The size-class branch lives inside the `ViewBuilder`, not the
+        // `ToolbarContentBuilder`: a conditional at the toolbar-content level
+        // silently produces no items on a compact width.
         ToolbarItemGroup(placement: .primaryAction) {
-            Button { session.requestHint() } label: { Label("Hint", systemImage: "lightbulb") }
-                .disabled(session.phase != .playing)
-            Button { showOriginal = true } label: { Label("Show Original", systemImage: "photo") }
-            Button { session.scatterTray() } label: { Label("Scatter Pieces", systemImage: "shuffle") }
-                .disabled(session.phase != .playing || session.state.trayOrder.isEmpty)
-            Button {
-                session.phase == .paused ? session.resume() : session.pause()
-            } label: {
-                Label(session.phase == .paused ? "Resume" : "Pause",
-                      systemImage: session.phase == .paused ? "play.fill" : "pause.fill")
+            #if os(iOS)
+            if sizeClass == .compact {
+                Menu {
+                    actionButtons
+                    Divider()
+                    undoRedoButtons
+                } label: {
+                    Label("Actions", systemImage: "ellipsis.circle")
+                }
+            } else {
+                actionButtons
+                undoRedoButtons
             }
-            .disabled(session.phase == .completed)
+            #else
+            actionButtons
+            #endif
+            pauseButton
         }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        Button { session.requestHint() } label: { Label("Hint", systemImage: "lightbulb") }
+            .disabled(session.phase != .playing)
+        Button { showOriginal = true } label: { Label("Show Original", systemImage: "photo") }
+        Button { session.scatterTray() } label: { Label("Scatter Pieces", systemImage: "shuffle") }
+            .disabled(session.phase != .playing || session.state.trayOrder.isEmpty)
+    }
+
+    @ViewBuilder
+    private var undoRedoButtons: some View {
+        Button { session.undo() } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
+            .disabled(!session.canUndo)
+        Button { session.redo() } label: { Label("Redo", systemImage: "arrow.uturn.forward") }
+            .disabled(!session.canRedo)
+    }
+
+    private var pauseButton: some View {
+        Button {
+            session.phase == .paused ? session.resume() : session.pause()
+        } label: {
+            Label(session.phase == .paused ? "Resume" : "Pause",
+                  systemImage: session.phase == .paused ? "play.fill" : "pause.fill")
+        }
+        .disabled(session.phase == .completed)
     }
 
     // MARK: - Overlays

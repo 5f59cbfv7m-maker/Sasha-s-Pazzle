@@ -29,6 +29,14 @@ struct RootView: View {
         }
         .preferredColorScheme(model.settings.appearance.colorScheme)
         .environment(model.settings)
+        #if os(iOS)
+        // Under memory pressure the derived-image caches are the cheapest thing
+        // to give back: everything in them can be regenerated or re-decoded.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+            Task { await ImageStore.shared.purgeMemory() }
+        }
+        #endif
         #if DEBUG
         .task { await DebugStageDriver.run(model: model) }
         #endif

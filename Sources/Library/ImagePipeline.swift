@@ -87,16 +87,6 @@ nonisolated enum ImagePipeline {
         return RenderedImage(cgImage: cropped)
     }
 
-    /// Redraws at an exact pixel size (used to normalise puzzle source images).
-    static func resize(_ image: RenderedImage, to size: CGSize) -> RenderedImage {
-        guard size.width >= 1, size.height >= 1,
-              let context = ArtToolkit.makeContext(size: size) else { return image }
-        context.interpolationQuality = .high
-        context.draw(image.cgImage, in: CGRect(origin: .zero, size: size))
-        guard let output = context.makeImage() else { return image }
-        return RenderedImage(cgImage: output)
-    }
-
     static func write(_ image: RenderedImage, to url: URL,
                       type: UTType = .jpeg, quality: CGFloat = 0.92) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),

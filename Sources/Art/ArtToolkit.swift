@@ -287,20 +287,4 @@ nonisolated enum ArtToolkit {
         }
         context.restoreGState()
     }
-
-    /// Scatters a caller-drawn motif (leaf, fish, bird, petal…) across the canvas.
-    static func scatter(in context: CGContext, rect: CGRect, rng: inout SplitMix64,
-                        count: Int, sizeRange: ClosedRange<CGFloat>,
-                        body: (CGContext, CGFloat, inout SplitMix64) -> Void) {
-        for _ in 0..<count {
-            let point = rng.point(in: rect.insetBy(dx: -rect.width * 0.05, dy: -rect.height * 0.05))
-            let size = rng.cg(sizeRange)
-            let angle = rng.cg(0...(.pi * 2))
-            context.saveGState()
-            context.translateBy(x: point.x, y: point.y)
-            context.rotate(by: angle)
-            body(context, size, &rng)
-            context.restoreGState()
-        }
-    }
 }

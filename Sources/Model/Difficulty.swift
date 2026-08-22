@@ -63,10 +63,6 @@ nonisolated enum Difficulty: String, CaseIterable, Codable, Identifiable, Sendab
         }
     }
 
-    /// Presets above this line stress the renderer; used to warn and to pick
-    /// rendering strategy defaults.
-    var isHeavy: Bool { targetPieces >= 300 }
-
     static let bounds = 12...1000
 }
 

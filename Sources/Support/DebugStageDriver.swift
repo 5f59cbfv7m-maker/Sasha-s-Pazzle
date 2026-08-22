@@ -33,6 +33,9 @@ enum DebugStageDriver {
         case "dark":
             model.settings.appearance = .dark
 
+        case "settings":
+            model.showSettings = true
+
         case "setup":
             model.openSetup(for: picture)
 

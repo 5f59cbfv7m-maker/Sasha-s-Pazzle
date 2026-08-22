@@ -109,7 +109,7 @@ struct SetupView: View {
                 }
             }
 
-            if targetPieces >= 300 {
+            if targetPieces >= Difficulty.insane.targetPieces {
                 Label("Large puzzles take a moment to cut and are best played with “Scatter Pieces”.",
                       systemImage: "info.circle")
                     .font(.footnote)
