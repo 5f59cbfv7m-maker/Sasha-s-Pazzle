@@ -101,10 +101,14 @@ device:
 1. Open the project in Xcode.
 2. Select the **JigsawPuzzle** target → *Signing & Capabilities*.
 3. Set **Team** to your Apple ID / Apple Developer team.
-4. Change **Bundle Identifier** from `com.example.JigsawPuzzle` to something
-   unique to you, e.g. `com.yourname.JigsawPuzzle`.
+4. Change **Bundle Identifier** to something unique to you — App IDs are global,
+   so a placeholder like `com.example.*` will usually be refused.
 5. Select your device and press ⌘R. On the device, trust the developer
    certificate under *Settings → General → VPN & Device Management*.
+
+   With a free Apple ID the build expires after **7 days** and at most three
+   such apps can be installed at once; a paid Apple Developer Program membership
+   raises that to a year.
 
 The macOS build is signed ad-hoc (`Sign to Run Locally`) and needs no team.
 
@@ -366,5 +370,5 @@ Stages: `library`, `dark`, `settings`, `setup`, `board`, `scattered`, `snapped`,
 
 ## Licence
 
-Sample project — no warranty. The bundle identifier `com.example.JigsawPuzzle` is
-a placeholder; replace it with your own before distributing.
+Sample project — no warranty. Replace the bundle identifier with your own before
+distributing.

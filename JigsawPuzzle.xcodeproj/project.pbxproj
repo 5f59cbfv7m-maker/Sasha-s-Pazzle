@@ -320,7 +320,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.JigsawPuzzle;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirillrychkov.SashasPazzle;
 				// The bundle is named for the player; the Swift module keeps its
 				// original name so no source or test import has to change.
 				PRODUCT_MODULE_NAME = JigsawPuzzle;
@@ -367,7 +367,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.JigsawPuzzle;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirillrychkov.SashasPazzle;
 				// The bundle is named for the player; the Swift module keeps its
 				// original name so no source or test import has to change.
 				PRODUCT_MODULE_NAME = JigsawPuzzle;
@@ -389,7 +389,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.JigsawPuzzleTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirillrychkov.SashasPazzleTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -410,7 +410,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.JigsawPuzzleTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirillrychkov.SashasPazzleTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
