@@ -43,7 +43,7 @@ struct SettingsView: View {
                 }
 
                 Section("About") {
-                    LabeledContent("Built-in pictures", value: "\(ArtFamily.libraryCount)")
+                    LabeledContent("Built-in pictures", value: "\(LibraryCatalog.count)")
                     LabeledContent("My photos", value: "\(model.library.userItems.count)")
                     Text("Pictures are generated on your device and stored locally. The game works entirely offline.")
                         .font(.footnote)

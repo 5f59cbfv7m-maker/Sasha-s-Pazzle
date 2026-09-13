@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <b>580 built-in pictures · 12 – 1000 pieces · no web view, no backend, no network access of any kind</b>
+  <b>24 built-in pictures · 12 – 1000 pieces · no web view, no backend, no network access of any kind</b>
 </p>
 
 The Xcode target, scheme and bundle identifier stay `JigsawPuzzle`; only the name
@@ -46,7 +46,7 @@ the app shows on screen is *Sasha's Pazzle*.
 </tr>
 <tr>
 <td align="center"><em>Nightmare mode — 805 pieces, cut in a tenth of a second</em></td>
-<td align="center"><em>The library: 580 generated pictures plus your own photos</em></td>
+<td align="center"><em>The library: 24 curated generated pictures plus your own photos</em></td>
 </tr>
 </table>
 
@@ -194,7 +194,9 @@ Everything falls out of it. Snapping = find the nearest candidate translation
 (a touching group's, or `.zero` for the board itself) within tolerance. Merging =
 breadth-first absorption of every touching group that now matches, so a piece
 dropped into a hole joins all four neighbours at once. Moving a group is O(1) and
-can never split it. Completion = one group left.
+can never split it. A group whose translation is `.zero` sits in its solved
+position and is **locked** — it cannot be dragged or sent back to the tray, so the
+finished part of the picture stays put. Completion = one group left.
 
 Snap tolerance scales with both piece size and zoom, and is clamped below half a
 cell so a piece can never grab the wrong slot.
@@ -238,9 +240,11 @@ Measured on an Apple Silicon Mac. What makes it work:
 ## The picture library
 
 Shipping several hundred photographs is neither practical nor licensable for an
-offline app, so the built-in library is **generated on the device**: 29 generator
-families × 20 seeded variants = **580 unique, reproducible pictures**, covering
-space, mountains, nature, sea, city, animals and abstract work.
+offline app, so the built-in library is **generated on the device**. Each of the
+29 generator families can paint 20 seeded variants; `LibraryCatalog.selection`
+names the **24 hand-picked pictures** that ship, one per family, covering space,
+mountains, nature, sea, city, animals and abstract work. A saved game stores the
+family and seed, so a picture that leaves the catalogue still loads.
 
 Every artwork ends with a mandatory detail pass — structured, multi-scale texture
 rather than smooth gradients — because an 800-piece puzzle is only solvable if
@@ -325,11 +329,12 @@ resizing are handled by the same code path as rotation.
 
 ## Features
 
-- 580 built-in pictures + your own photos (Photos and Files import)
+- 24 built-in pictures + your own photos (Photos and Files import)
 - Difficulty from 12 to 800 pieces, plus a custom slider up to 1000
 - Framing: original, 1:1, 3:2, 4:3, 16:9, 2:3 — centre-cropped, never stretched
 - True jigsaw geometry with tabs, sockets and flat borders
-- Snap, green connection flash, group forming and group merging
+- Snap, green connection flash, group forming and group merging; a cluster
+  that reaches its solved position locks in place
 - Pan and zoom with fit-board / fit-table shortcuts
 - Elapsed-time clock that stops on pause and in the background
 - Pause, hint, show original, scatter-all, undo / redo
@@ -372,9 +377,9 @@ Stages: `library`, `dark`, `settings`, `setup`, `board`, `scattered`, `snapped`,
 
 ## Known limitations
 
-- Built-in pictures are **generated artwork, not photographs**. Bundling 500+
-  real photos is not possible for an offline, dependency-free, licence-clean
-  app; import your own for photographic puzzles.
+- Built-in pictures are **generated artwork, not photographs**. Bundling real
+  photos is not possible for an offline, dependency-free, licence-clean app;
+  import your own for photographic puzzles.
 - Pieces cannot be rotated. Every difficulty assumes the classic
   upright-pieces rule.
 - Above roughly 1000 pieces the tray becomes an impractical way to play; use

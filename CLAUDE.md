@@ -12,7 +12,7 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **53 tests in 6 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **55 tests in 6 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
@@ -27,7 +27,7 @@ mismatch — it is deliberate.
 | Path | Role |
 |---|---|
 | `Sources/Engine/` | `EdgeProfile`, `PuzzleGeometry`, `PuzzleState` — pure, `Sendable`, no SwiftUI |
-| `Sources/Art/` | Procedural picture generators (29 families × 20 seeds = 580) |
+| `Sources/Art/` | Procedural picture generators; `LibraryCatalog.selection` picks the 24 that ship |
 | `Sources/Render/` | `PieceTextureStore` — parallel bitmap cutting with the bevel |
 | `Sources/Interaction/` | `Viewport`, `BoardEventView` (AppKit/UIKit input bridge) |
 | `Sources/Game/` | `GameSession` plus the playing screen |
@@ -45,6 +45,9 @@ makes them unit-testable and safe to run off the main thread.
 - **Two pieces are joined iff their groups share a translation.** Snapping,
   merging and completion all fall out of this. Do not add per-edge connection
   bookkeeping.
+- **A group at translation `.zero` is locked.** `PieceGroup.isLocked` gates
+  `beginDrag`, `returnPieceToTray` and `PuzzleState.returnToTray`; a locked
+  cluster is part of the finished picture and must never move again.
 - **Board units are resolution independent** — board area is always
   `PuzzleGeometry.referenceArea`. Window size, zoom and orientation only change
   `Viewport`. If a resize ever loses pieces, something wrote screen units into

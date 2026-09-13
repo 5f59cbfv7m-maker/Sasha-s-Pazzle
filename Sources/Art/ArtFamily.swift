@@ -3,10 +3,10 @@ import Foundation
 
 /// The generator families behind the built-in picture library.
 ///
-/// Bundling several hundred real photographs is neither legal nor practical for
-/// an offline app, so the library is *generated*: 29 families × 20 seeded
-/// variants = 580 unique, reproducible, detail-rich pictures that cost a few
-/// kilobytes of code instead of gigabytes of assets.
+/// Bundling real photographs is neither legal nor practical for an offline app,
+/// so the library is *generated*: every family can paint 20 seeded variants, and
+/// `LibraryCatalog.selection` names the ones that ship. A saved game stores the
+/// family and seed, so a picture that leaves the catalogue still loads.
 nonisolated enum ArtFamily: Int, CaseIterable, Codable, Sendable, Identifiable {
     // Space
     case nebula, galaxy, aurora, planetRise
@@ -25,9 +25,8 @@ nonisolated enum ArtFamily: Int, CaseIterable, Codable, Sendable, Identifiable {
 
     var id: Int { rawValue }
 
-    /// Seeded variants per family. 29 × 20 = 580 built-in pictures.
+    /// Seeded variants each family can produce; the catalogue picks from these.
     static let variantsPerFamily = 20
-    static var libraryCount: Int { allCases.count * variantsPerFamily }
 
     var category: ArtCategory {
         switch self {

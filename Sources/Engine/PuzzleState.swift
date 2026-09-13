@@ -14,6 +14,9 @@ nonisolated struct PieceGroup: Sendable, Codable, Identifiable, Equatable {
     var z: Int32
 
     var isHome: Bool { translation.isApproximatelyEqual(to: .zero, tolerance: 0.001) }
+    /// A cluster sitting at home is part of the finished picture: it can no
+    /// longer be dragged, split or sent back to the tray.
+    var isLocked: Bool { isHome }
 }
 
 /// What happened when a dragged group was released.
@@ -87,6 +90,9 @@ nonisolated struct PuzzleState: Sendable, Codable, Equatable {
         return id >= 0 ? groups[id] : nil
     }
 
+    /// `true` once the piece has been placed correctly on the board.
+    func isLocked(_ piece: Int32) -> Bool { group(of: piece)?.isLocked ?? false }
+
     func neighbors(of piece: Int32) -> [Int32] {
         let r = row(of: piece), c = column(of: piece)
         var result: [Int32] = []
@@ -129,9 +135,10 @@ nonisolated struct PuzzleState: Sendable, Codable, Equatable {
     }
 
     /// Sends a single piece back to the tray, splitting it off its group if needed.
+    /// Pieces already locked in place stay where they are.
     mutating func returnToTray(_ piece: Int32) {
         let id = pieceGroup[Int(piece)]
-        guard id >= 0, var group = groups[id] else { return }
+        guard id >= 0, var group = groups[id], !group.isLocked else { return }
         group.members.removeAll { $0 == piece }
         if group.members.isEmpty { groups.removeValue(forKey: id) } else { groups[id] = group }
         pieceGroup[Int(piece)] = -1

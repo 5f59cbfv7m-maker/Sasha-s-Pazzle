@@ -239,6 +239,22 @@ struct SessionTests {
         #expect(session.state.groups.count == 1)
     }
 
+    @Test("A correctly placed piece cannot be sent back to the tray")
+    func lockedPieceStaysOnBoard() {
+        let session = makeSession()
+        session.startForTesting()
+        let cell = session.geometry.cellSize
+        _ = session.placePieceFromTray(0, at: CGPoint(x: cell.width / 2 + 3, y: cell.height / 2 - 2),
+                                       viewScale: 1, assist: .standard)
+        #expect(session.state.isLocked(0))
+        let undoDepth = session.canUndo
+
+        session.returnPieceToTray(0)
+        #expect(session.state.isLocked(0))
+        #expect(session.placedCount == 1)
+        #expect(session.canUndo == undoDepth, "a refused request must not push an undo step")
+    }
+
     @Test("A hint points at a piece without solving anything")
     func hintDoesNotSolve() {
         let session = makeSession()

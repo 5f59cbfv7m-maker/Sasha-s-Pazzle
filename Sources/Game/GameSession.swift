@@ -263,10 +263,13 @@ final class GameSession {
 
     // MARK: - Dragging
 
+    /// Starts dragging the cluster under `point`. Returns `false` when there is
+    /// nothing movable there — empty table or a cluster already locked in its
+    /// solved position — so the gesture falls through to panning the board.
     @discardableResult
     func beginDrag(at point: CGPoint) -> Bool {
         guard phase == .playing, let piece = piece(at: point),
-              let group = state.group(of: piece) else { return false }
+              let group = state.group(of: piece), !group.isLocked else { return false }
         pushUndo()
         state.bringToFront(group: group.id)
         selectedPiece = piece
@@ -340,8 +343,9 @@ final class GameSession {
     }
 
     /// Sends a placed piece back to the tray (secondary click / long press).
+    /// Locked pieces ignore the request.
     func returnPieceToTray(_ piece: Int32) {
-        guard phase == .playing, state.group(of: piece) != nil else { return }
+        guard phase == .playing, let group = state.group(of: piece), !group.isLocked else { return }
         pushUndo()
         state.returnToTray(piece)
         if selectedPiece == piece { selectedPiece = nil }

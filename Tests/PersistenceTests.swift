@@ -112,12 +112,15 @@ struct PersistenceTests {
         #expect(!restored[0].isUserPhoto)
     }
 
-    @Test("The built-in catalogue has 500+ unique pictures")
-    func catalogueIsLargeAndUnique() {
+    @Test("The built-in catalogue is the curated 24 and every picture is unique")
+    func catalogueIsCuratedAndUnique() {
         let items = LibraryCatalog.builtIn()
-        #expect(items.count == ArtFamily.libraryCount)
-        #expect(items.count >= 500)
+        #expect(items.count == 24)
+        #expect(items.count == LibraryCatalog.count)
         #expect(Set(items.map(\.id)).count == items.count)
+        for (family, variant) in LibraryCatalog.selection {
+            #expect((0..<ArtFamily.variantsPerFamily).contains(variant), "\(family) variant \(variant) is out of range")
+        }
         // Every category is represented.
         for category in ArtCategory.allCases where category != .mine {
             #expect(items.contains { $0.category == category }, "no pictures for \(category)")

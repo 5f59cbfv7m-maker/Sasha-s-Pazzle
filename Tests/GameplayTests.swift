@@ -157,12 +157,37 @@ struct GameplayTests {
     @Test("A piece can be sent back to the tray")
     func returnToTray() {
         var state = makeState()
-        state.placeFromTray(3, translation: .zero)
+        state.placeFromTray(3, translation: CGPoint(x: 300, y: 300))
         #expect(state.placedCount == 1)
         state.returnToTray(3)
         #expect(state.placedCount == 0)
         #expect(state.groups.isEmpty)
         #expect(state.trayOrder.contains(3))
+    }
+
+    @Test("A piece placed correctly locks in place")
+    func correctPlacementLocks() {
+        var state = makeState()
+        let loose = state.placeFromTray(3, translation: CGPoint(x: 300, y: 300))
+        #expect(!state.isLocked(3), "a loose piece is free to move")
+
+        let group = state.placeFromTray(0, translation: CGPoint(x: 6, y: -4))
+        let outcome = state.settle(group: group, tolerance: 20)
+        #expect(outcome.didSnap)
+        #expect(state.group(of: 0)?.isHome == true)
+        #expect(state.isLocked(0), "a piece snapped to its home is locked")
+
+        // Nothing dislodges a locked piece: not the tray, not a nudge.
+        state.returnToTray(0)
+        #expect(state.isLocked(0) && state.placedCount == 2)
+
+        // Another piece that later reaches its own home locks the same way.
+        _ = state.settle(group: loose, tolerance: 20)
+        #expect(!state.isLocked(3), "out of range stays loose")
+        state.setTranslation(CGPoint(x: -3, y: 2), forGroup: loose)
+        _ = state.settle(group: loose, tolerance: 20)
+        #expect(state.isLocked(3))
+        #expect(state.group(of: 3)?.isHome == true)
     }
 
     @Test("Snap tolerance scales with piece size and zoom")
