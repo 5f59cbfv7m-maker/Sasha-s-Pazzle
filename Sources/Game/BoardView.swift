@@ -54,6 +54,22 @@ final class BoardInputController: BoardEventHandling {
 
     func boardHover(at point: CGPoint?) { hoverPoint = point }
 
+    /// Pulls the table back into view after the board changes size.
+    ///
+    /// Panning and zooming clamp themselves, but a resize used to leave the
+    /// viewport untouched: shrink the window while the board sits near an edge
+    /// and every piece ends up outside the visible rect, with only "Fit" to get
+    /// them back. iPadOS 27 resizes windows continuously, so this now runs for
+    /// every frame of a resize drag — it may only nudge the offset. Re-fitting
+    /// here would rescale the board under the player's hands.
+    func handleResize() {
+        guard let session, viewSize.width > 1, viewSize.height > 1 else { return }
+        let adjusted = session.viewport.clamped(content: session.tableRect, viewSize: viewSize)
+        // `Viewport` is `Equatable`; skipping the no-op write keeps a resize
+        // drag from invalidating the board on every frame.
+        if adjusted != session.viewport { session.viewport = adjusted }
+    }
+
     func fitBoard(padding: CGFloat = 40) {
         guard let session, viewSize.width > 1 else { return }
         session.viewport = .fitting(content: session.boardRect, in: viewSize, padding: padding)
@@ -101,7 +117,7 @@ struct BoardView: View {
                 let wasEmpty = controller.viewSize.width < 1
                 controller.viewSize = size
                 controller.displayScale = displayScale
-                if wasEmpty { controller.fitBoard() }
+                if wasEmpty { controller.fitBoard() } else { controller.handleResize() }
             }
             .onAppear {
                 controller.session = session

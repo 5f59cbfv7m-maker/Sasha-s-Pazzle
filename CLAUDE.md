@@ -12,7 +12,7 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **55 tests in 6 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **60 tests in 7 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
@@ -73,7 +73,9 @@ width. Branch inside the `ViewBuilder`, not at toolbar-content level.
 
 **`.frame(minWidth:)` is a window constraint.** Applying it on iOS forces the
 layout wider than the phone screen and pushes the HUD and toolbar off both edges.
-Guard it with `#if os(macOS)`.
+Guard it with `#if os(macOS)`. This bites **sheets** as well as the root window —
+`SettingsView` and `OriginalImageSheet` each carried an unguarded minimum long
+after the window itself was fixed.
 
 **Tests must inject a temp `SaveStore`**, otherwise they write into the player's
 real saved games. `GameSession.init(..., saveStore:)` exists for this.
@@ -88,6 +90,40 @@ made artwork generation 50× slower; it allocates a 512-entry table.
 
 **Piece textures crop the source**, they do not draw the whole image under a
 clip. Cropping a `CGImage` is free; drawing is not.
+
+## Building against the 27 SDKs
+
+Checked against Apple's release notes for Xcode 27 (Swift 6.4), iOS/iPadOS 27 and
+macOS 27 "Golden Gate". The app needs no migration, but these are the facts worth
+not rediscovering:
+
+- **Deployment targets stay at iOS 18 / macOS 15.** Nothing here requires raising
+  them, and `ARCHS_STANDARD` only drops `x86_64` once `MACOSX_DEPLOYMENT_TARGET`
+  is ≥ 27.0 — so the Mac build stays universal.
+- **The launch-screen requirement is already met.** Apps built with the 27.0 SDK
+  are rejected without `UILaunchScreen`/`UILaunchStoryboardName`;
+  `INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*] = YES` generates it. Do
+  not remove that key.
+- **`@State` is a macro now, not a property wrapper.** Three patterns stopped
+  compiling: giving a `@State` an initial value *and* assigning it in the view's
+  own `init`, composing `@State` with another wrapper or macro, and leaning on
+  the synthesized private memberwise `init`. No view here does any of them —
+  keep it that way. The App's `@State private var model = AppModel()` gets
+  *better*: the macro evaluates the initial value once rather than on every
+  re-instantiation.
+- **Menu symbol images are hidden by default** in macOS 27 context menus and the
+  iPadOS 27 menu bar. The library context menus lose their icons and that is the
+  intended new look — they are actions. Only force `.labelStyle(.titleAndIcon)`
+  on an item that represents an *object*, never to "bring the icons back".
+- **iPadOS 27 resizes windows continuously**, and no longer gates that on the
+  declared interface orientations. Every frame of a resize drag reaches
+  `BoardView.onGeometryChange`, which is why `BoardInputController.handleResize`
+  only re-clamps the offset: re-fitting there would rescale the board mid-drag.
+- **Not applicable, but easy to misread as urgent:** the `ImageCreator`,
+  `FileDocument`/`ReferenceFileDocument` and On Demand Resources deprecations —
+  this app uses none of them. `controlSize` is now reset inside sheets and
+  popovers, but the two `controlSize` call sites live in `SetupView`, which is
+  pushed, not presented.
 
 ## Verifying visually
 

@@ -66,6 +66,11 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
             }
         }
+        // A minimum size is a *window* constraint: the macOS Settings scene needs
+        // one, but on iOS this sheet is the phone screen and 460pt forces the
+        // form wider than it, clipping the Done button off the trailing edge.
+        #if os(macOS)
         .frame(minWidth: 460, minHeight: 480)
+        #endif
     }
 }

@@ -45,7 +45,12 @@ struct HomeView: View {
             guard !selection.isEmpty else { return }
             Task { await importPhotos(selection) }
         }
-        .alert("Import failed", isPresented: .constant(importError != nil)) {
+        // A `.constant` binding cannot be written back, so any dismissal the OK
+        // button doesn't handle — Escape, or the Return key on a hardware
+        // keyboard — left `importError` set and the alert re-presented itself
+        // immediately. Clearing it from the setter makes every route dismiss.
+        .alert("Import failed", isPresented: Binding(get: { importError != nil },
+                                                     set: { if !$0 { importError = nil } })) {
             Button("OK") { importError = nil }
         } message: {
             Text(importError ?? "")
