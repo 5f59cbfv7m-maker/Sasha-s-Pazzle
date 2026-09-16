@@ -66,10 +66,15 @@ the app shows on screen is *Sasha's Pazzle*.
 |---|---|
 | Xcode | 16.0 or newer (developed on **Xcode 26.6**) |
 | Swift | 6.0 language mode (toolchain **Swift 6.3**) |
-| macOS | 15.0 or newer |
-| iOS / iPadOS | 18.0 or newer |
+| macOS | 15.0 or newer, up to and including **macOS 27 Golden Gate** |
+| iOS / iPadOS | 18.0 or newer, up to and including **iOS / iPadOS 27** |
 | Architecture | Apple Silicon and Intel |
 | Dependencies | **none** — no SPM packages, no CocoaPods, no Carthage |
+
+The deployment targets stay at macOS 15 / iOS 18: nothing in the 27 SDKs is
+required to build or run. Submitting to the App Store does need Xcode 27, which
+also opts the app into the current Liquid Glass appearance. `CLAUDE.md` records
+what the 27 SDKs change for this code.
 
 ## Running it
 
@@ -347,7 +352,7 @@ resizing are handled by the same code path as rotation.
 
 ## Tests
 
-`Tests/` contains **53 tests in 6 suites** (Swift Testing), covering the areas the
+`Tests/` contains **60 tests in 7 suites** (Swift Testing), covering the areas the
 engine cannot be allowed to get wrong:
 
 grid selection · edge generation · edge matching between neighbours · flat
@@ -356,7 +361,8 @@ coordinates · snap calculation and tolerance scaling · group merge · four-way
 bridging · group movement · completion detection · shuffle · scatter · the real
 clock · undo/redo · save/load and serialisation · image crop, resize and decode ·
 artwork determinism and local contrast · texture rendering and the memory budget ·
-photo import, reload and deletion.
+photo import, reload and deletion · viewport mapping, anchored zoom and the
+resize clamp.
 
 ```bash
 xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \

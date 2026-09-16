@@ -170,6 +170,10 @@ struct OriginalImageSheet: View {
                 }
             }
         }
+        // Same window-constraint trap: on a phone this sheet is already the full
+        // screen, and 520pt pushes the navigation bar past both edges.
+        #if os(macOS)
         .frame(minWidth: 520, minHeight: 380)
+        #endif
     }
 }
