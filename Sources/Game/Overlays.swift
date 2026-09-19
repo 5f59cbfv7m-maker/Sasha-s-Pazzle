@@ -168,7 +168,7 @@ struct CompletionOverlay: View {
 
                 HStack(spacing: 12) {
                     stat(TimeFormatting.clock(session.elapsed), "time")
-                    if let best = model.lastCompletion?.previousBest, best > session.elapsed {
+                    if let best = model.lastCompletion?.previousBest, best - session.elapsed >= 1 {
                         stat("−" + TimeFormatting.short(best - session.elapsed), "faster than record", tinted: true)
                     } else {
                         stat("\(session.pieceCount)", "pieces")

@@ -7,7 +7,8 @@
 <p align="center">
   A native Apple jigsaw puzzle for <b>macOS, iPadOS and iOS</b>, written in Swift 6 and SwiftUI.<br>
   Real interlocking piece geometry, real drag-and-drop, real groups —<br>
-  from a 12-piece warm-up to an 800-piece project.
+  from a 12-piece warm-up to an 800-piece project, with a daily puzzle,
+  streaks and achievements.
 </p>
 
 <p align="center">
@@ -23,8 +24,8 @@
   <b>24 built-in pictures · 12 – 1000 pieces · no web view, no backend, no network access of any kind</b>
 </p>
 
-The Xcode target, scheme and bundle identifier stay `JigsawPuzzle`; only the name
-the app shows on screen is *Sasha's Puzzles*.
+The Xcode target, scheme and Swift module stay `JigsawPuzzle`; only the name the
+app shows on screen is *Sasha's Puzzles*.
 
 ---
 
@@ -42,11 +43,26 @@ the app shows on screen is *Sasha's Puzzles*.
 <table>
 <tr>
 <td width="58%"><img src="docs/mac-800-pieces.jpg" alt="800-piece mode"></td>
-<td width="42%"><img src="docs/ipad-library.jpg" alt="Picture library on iPad"></td>
+<td width="42%"><img src="docs/ipad-library.jpg" alt="Library with the daily puzzle on iPad"></td>
 </tr>
 <tr>
 <td align="center"><em>Nightmare mode — 805 pieces, cut in a tenth of a second</em></td>
-<td align="center"><em>The library: 24 curated generated pictures plus your own photos</em></td>
+<td align="center"><em>The library: today's puzzle and its streak, 24 curated
+pictures plus your own photos, best times on solved cards</em></td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="33%"><img src="docs/ipad-completed.jpg" alt="Completion screen"></td>
+<td width="33%"><img src="docs/ipad-dark.jpg" alt="Dark board on iPad"></td>
+<td width="33%"><img src="docs/ipad-onboarding.jpg" alt="Onboarding"></td>
+</tr>
+<tr>
+<td align="center"><em>Solved — time, record delta, pace, confetti and any
+achievement just unlocked</em></td>
+<td align="center"><em>Dark appearance, same warm palette</em></td>
+<td align="center"><em>Three-step onboarding on first launch</em></td>
 </tr>
 </table>
 
@@ -57,6 +73,17 @@ the app shows on screen is *Sasha's Puzzles*.
 <p align="center">
   <em>iPhone — board on top, tray along the bottom, actions collapsed into a menu</em>
 </p>
+
+### Design
+
+The look follows the *Organic* design system: cream and sand surfaces
+(`#f5ead8` / `#ebddc5`), a terracotta accent (`#c67139`) for the primary action,
+sage (`#7a8a5e`) for everything that says "done", pill-shaped controls and
+over-rounded cards. Headings are set in **Caprasimo**, body text in **Figtree**
+(both bundled, SIL Open Font License). Neither font has Cyrillic glyphs, so the
+Russian localisation falls back to SF Rounded and SF through a CoreText cascade
+list rather than to a different weight. Every colour is a dynamic token in
+`Theme.swift`, so light and dark are one set of views.
 
 ---
 
@@ -276,6 +303,11 @@ puzzle keeps working after the original leaves your library.
   pause, on leaving the foreground and on closing the board.
 * **Photo library** — a JSON manifest next to a folder of JPEGs, both inside the
   app container. Entries whose file has vanished are dropped on load.
+* **Statistics** — one JSON array of finished games (picture, category, pieces,
+  time, date). Totals, best times, the daily streak, the 12-week chart and all
+  14 achievements are *derived* from it on read, so there is nothing to keep in
+  sync and nothing to migrate. A game counts as the daily puzzle when it is that
+  day's picture at the daily piece count.
 
 Nothing leaves the device. There is no account, no server and no analytics.
 
@@ -291,13 +323,13 @@ Sources/
 ├── Render/       PieceTextureStore (parallel bitmap cutting + bevel)
 ├── Interaction/  Viewport, BoardEventView (AppKit/UIKit input bridge)
 ├── Art/          Noise, Palette, ArtToolkit, ArtFamily, ArtRenderer
-├── Library/      ImagePipeline, ImageStore, PhotoLibraryStore, HomeView
+├── Library/      ImagePipeline, ImageStore, PhotoLibraryStore, HomeView, ProfileView
 ├── Game/         GameSession, BoardView, TrayView, SetupView, overlays
 ├── Settings/     AppSettings, SettingsView
-├── Persistence/  GameSnapshot, SaveStore
-├── Support/      SplitMix64, CoreGraphics helpers, Feedback, debug driver
-└── Resources/    Assets.xcassets, Localizable.xcstrings
-Tests/            51 tests across 5 suites
+├── Persistence/  GameSnapshot, SaveStore, PlayerStats (achievements, streaks)
+├── Support/      Theme (tokens, fonts, controls), SplitMix64, Feedback, debug driver
+└── Resources/    Assets.xcassets, Localizable.xcstrings, Fonts/
+Tests/            63 tests across 8 suites
 ```
 
 The engine layer (`Engine/`, `Art/`) is `nonisolated` and `Sendable` and knows
@@ -344,15 +376,21 @@ resizing are handled by the same code path as rotation.
 - Elapsed-time clock that stops on pause and in the background
 - Pause, hint, show original, scatter-all, undo / redo
 - Autosave and *Continue* from the library
+- A daily puzzle (150 pieces, one picture per day) with a streak counter
+- Profile: puzzles solved, pieces placed, time at the table, a 12-week chart
+  and 14 achievements; best time on every solved card
+- Completion screen with confetti, the delta to your previous record and any
+  achievement just unlocked
+- Three-step onboarding on first launch
 - Settings: theme, sound, haptics, picture guide, piece outlines, snap assist,
-  defaults, reset saves
+  defaults, reset saves and statistics
 - Procedurally synthesised sound and haptics for snap, merge and completion
 - Full keyboard-shortcut menu bar on macOS
 - English and Russian, Dynamic Type, VoiceOver labels, light and dark
 
 ## Tests
 
-`Tests/` contains **60 tests in 7 suites** (Swift Testing), covering the areas the
+`Tests/` contains **63 tests in 8 suites** (Swift Testing), covering the areas the
 engine cannot be allowed to get wrong:
 
 grid selection · edge generation · edge matching between neighbours · flat
@@ -362,7 +400,7 @@ bridging · group movement · completion detection · shuffle · scatter · the 
 clock · undo/redo · save/load and serialisation · image crop, resize and decode ·
 artwork determinism and local contrast · texture rendering and the memory budget ·
 photo import, reload and deletion · viewport mapping, anchored zoom and the
-resize clamp.
+resize clamp · daily streaks, achievement unlocks and completion summaries.
 
 ```bash
 xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
@@ -375,8 +413,11 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 launch so screens can be photographed reproducibly:
 
 ```bash
-open -n /path/to/JigsawPuzzle.app --args --stage huge --clear-saves
+open -n "/path/to/Sasha's Puzzles.app" --args --stage huge --clear-saves
 ```
+
+Add `-AppleLanguages "(en)" -onboarding YES -appearance light` to fix the
+language, skip the first-run onboarding and pin the appearance.
 
 Stages: `library`, `dark`, `settings`, `setup`, `board`, `scattered`, `snapped`,
 `hint`, `completed`, `huge`, `hugeSolved`.
