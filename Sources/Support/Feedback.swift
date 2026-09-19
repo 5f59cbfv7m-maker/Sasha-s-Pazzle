@@ -96,31 +96,43 @@ final class Feedback {
         }
     }
 
-    /// Additive synthesis: a few partials with exponential decay. Short, dry and
-    /// unobtrusive — the opposite of a stock "ding" sample.
+    /// Additive synthesis: a few partials with a soft attack and exponential
+    /// decay. Low fundamentals, quiet upper harmonics and a slow detuned pair
+    /// on the chord keep it warm and muted — a wooden tap and a marimba, not
+    /// a stock "ding".
     private nonisolated static func synthesize(_ tone: Tone, format: AVAudioFormat) -> AVAudioPCMBuffer? {
         struct Partial { var frequency: Double; var amplitude: Double; var start: Double; var decay: Double }
 
         let partials: [Partial]
         let duration: Double
+        let attack: Double
         switch tone {
         case .snap:
-            duration = 0.16
-            partials = [Partial(frequency: 1_180, amplitude: 0.35, start: 0, decay: 42),
-                        Partial(frequency: 1_760, amplitude: 0.18, start: 0, decay: 60),
-                        Partial(frequency: 520, amplitude: 0.14, start: 0, decay: 34)]
+            // A muted wooden tap: G4 with a whisper of its harmonics.
+            duration = 0.24
+            attack = 0.004
+            partials = [Partial(frequency: 392, amplitude: 0.22, start: 0, decay: 26),
+                        Partial(frequency: 784, amplitude: 0.07, start: 0, decay: 40),
+                        Partial(frequency: 1_568, amplitude: 0.025, start: 0, decay: 70)]
         case .merge:
-            duration = 0.5
-            partials = [Partial(frequency: 523.25, amplitude: 0.24, start: 0, decay: 9),
-                        Partial(frequency: 659.25, amplitude: 0.2, start: 0.05, decay: 9),
-                        Partial(frequency: 783.99, amplitude: 0.18, start: 0.1, decay: 9)]
+            // Two soft marimba notes a fifth apart.
+            duration = 0.7
+            attack = 0.008
+            partials = [Partial(frequency: 261.63, amplitude: 0.16, start: 0, decay: 7),
+                        Partial(frequency: 523.25, amplitude: 0.06, start: 0, decay: 12),
+                        Partial(frequency: 392, amplitude: 0.15, start: 0.09, decay: 6),
+                        Partial(frequency: 784, amplitude: 0.05, start: 0.09, decay: 11)]
         case .complete:
-            duration = 1.5
-            partials = [Partial(frequency: 523.25, amplitude: 0.22, start: 0.0, decay: 4),
-                        Partial(frequency: 659.25, amplitude: 0.22, start: 0.14, decay: 4),
-                        Partial(frequency: 783.99, amplitude: 0.22, start: 0.28, decay: 4),
-                        Partial(frequency: 1_046.5, amplitude: 0.26, start: 0.42, decay: 2.6),
-                        Partial(frequency: 1_567.98, amplitude: 0.1, start: 0.42, decay: 3.4)]
+            // A slow rising C-major arpeggio; the top note is a detuned pair
+            // so it shimmers rather than rings.
+            duration = 2.4
+            attack = 0.02
+            partials = [Partial(frequency: 261.63, amplitude: 0.16, start: 0.0, decay: 2.2),
+                        Partial(frequency: 329.63, amplitude: 0.15, start: 0.16, decay: 2.2),
+                        Partial(frequency: 392, amplitude: 0.15, start: 0.32, decay: 2.2),
+                        Partial(frequency: 522.25, amplitude: 0.11, start: 0.5, decay: 1.5),
+                        Partial(frequency: 524.25, amplitude: 0.11, start: 0.5, decay: 1.5),
+                        Partial(frequency: 130.81, amplitude: 0.08, start: 0.0, decay: 1.6)]
         }
 
         let frames = AVAudioFrameCount(duration * format.sampleRate)
@@ -134,10 +146,10 @@ final class Feedback {
             for partial in partials where t >= partial.start {
                 let local = t - partial.start
                 sample += partial.amplitude * sin(2 * .pi * partial.frequency * local)
-                    * exp(-local * partial.decay)
+                    * exp(-local * partial.decay) * min(1, local / attack)
             }
             // Short fade-out prevents a click at the buffer edge.
-            let fade = min(1, (duration - t) * 40)
+            let fade = min(1, (duration - t) * 20)
             let value = Float(sample * max(0, fade))
             for channel in 0..<Int(format.channelCount) { channels[channel][frame] = value }
         }

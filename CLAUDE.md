@@ -120,6 +120,16 @@ made artwork generation 50× slower; it allocates a 512-entry table.
 **Piece textures crop the source**, they do not draw the whole image under a
 clip. Cropping a `CGImage` is free; drawing is not.
 
+**Tray drags on touch are a UIKit pan** (`TrayPan` in `TrayView.swift`), not a
+SwiftUI gesture. `LongPressGesture.sequenced(before: DragGesture)` lost every
+drag whose finger moved more than 10pt inside 0.16 s — i.e. any normal drag —
+which is what "pieces cannot be picked up in landscape" was. The pan subclass
+decides itself in the first 10pt (steeper than ~20° off the scroll axis lifts
+the piece, otherwise it fails and the tray scrolls) and makes the scroll view's
+pan wait for it. Verify both directions with `touch_path` on the simulator;
+the tray *looks* unscrolled after a flick because rows repeat every 84pt, so
+read `onScrollGeometryChange` rather than trusting a screenshot.
+
 ## Building against the 27 SDKs
 
 Checked against Apple's release notes for Xcode 27 (Swift 6.4), iOS/iPadOS 27 and
@@ -162,7 +172,9 @@ There is no way to read back a live SwiftUI window — `cacheDisplay` and
 - **`DebugStageDriver`** (debug builds only) drives the app into a named state at
   launch: `open -n "<app>" --args --stage huge --clear-saves`. Stages: `library`,
   `dark`, `settings`, `setup`, `board`, `scattered`, `snapped`, `hint`,
-  `completed`, `huge`, `hugeSolved`.
+  `completed`, `huge`, `hugeSolved`. `--tray-trailing` forces the landscape
+  layout on a portrait simulator (there is no `simctl` rotate); add
+  `-AppleLanguages "(en)" -onboarding YES -appearance light` to pin the rest.
 - **Screenshots**: on macOS capture the window only (find its number via
   `CGWindowListCopyWindowInfo`, then `screencapture -o -l <id>`) — a full-screen
   grab exposes the user's desktop. On iOS use `xcrun simctl io <device> screenshot`.

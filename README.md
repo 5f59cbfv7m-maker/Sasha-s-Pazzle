@@ -420,7 +420,8 @@ Add `-AppleLanguages "(en)" -onboarding YES -appearance light` to fix the
 language, skip the first-run onboarding and pin the appearance.
 
 Stages: `library`, `dark`, `settings`, `setup`, `board`, `scattered`, `snapped`,
-`hint`, `completed`, `huge`, `hugeSolved`.
+`hint`, `completed`, `huge`, `hugeSolved`. `--tray-trailing` forces the
+landscape layout on a portrait simulator.
 
 ## Known limitations
 

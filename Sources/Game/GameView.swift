@@ -314,18 +314,23 @@ struct GameView: View {
     // MARK: - Layout policy
 
     private func trayPlacement(for size: CGSize) -> TrayPlacement {
+        #if DEBUG
+        // Lets the stage driver photograph the landscape layout on a portrait simulator.
+        if CommandLine.arguments.contains("--tray-trailing") { return .trailing }
+        #endif
         #if os(macOS)
-        size.width >= 720 ? .trailing : .bottom
+        return size.width >= 720 ? .trailing : .bottom
         #else
-        size.width > size.height && size.width >= 700 ? .trailing : .bottom
+        return size.width > size.height && size.width >= 700 ? .trailing : .bottom
         #endif
     }
 
     private func trayThickness(for size: CGSize) -> CGFloat {
         #if os(macOS)
-        clamp(size.width * 0.22, 240, 320)
+        return clamp(size.width * 0.22, 240, 320)
         #else
-        size.width > size.height ? clamp(size.width * 0.24, 220, 300) : clamp(size.height * 0.2, 130, 220)
+        return size.width > size.height || CommandLine.arguments.contains("--tray-trailing")
+            ? clamp(size.width * 0.24, 220, 300) : clamp(size.height * 0.2, 130, 220)
         #endif
     }
 

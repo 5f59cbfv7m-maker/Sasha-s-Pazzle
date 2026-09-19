@@ -86,7 +86,7 @@ struct TrayView: View {
     private var cells: some View {
         ForEach(session.state.trayOrder, id: \.self) { piece in
             TrayCell(image: session.textures.images[safe: Int(piece)] ?? nil, size: cellSize)
-                .trayDragGesture(piece: piece, onChanged: onChanged, onEnded: onEnded)
+                .trayDragGesture(piece: piece, placement: placement, onChanged: onChanged, onEnded: onEnded)
                 .accessibilityLabel(Text("Puzzle piece"))
                 .accessibilityHint(Text("Drag onto the board"))
         }
@@ -119,9 +119,11 @@ private struct TrayCell: View {
 }
 
 private extension View {
-    /// Mouse drags start immediately; touch requires a short press so the tray
-    /// can still be scrolled with a finger.
-    func trayDragGesture(piece: Int32,
+    /// Mouse drags start immediately. Touch goes through a UIKit pan that
+    /// reads the first 10pt: across the scroll axis lifts the piece, along it
+    /// the pan fails and the tray scrolls. The previous long-press prelude
+    /// dropped every drag whose finger was already moving.
+    func trayDragGesture(piece: Int32, placement: TrayPlacement,
                          onChanged: @escaping (Int32, CGPoint) -> Void,
                          onEnded: @escaping (Int32, CGPoint) -> Void) -> some View {
         #if os(macOS)
@@ -131,16 +133,78 @@ private extension View {
                 .onEnded { onEnded(piece, $0.location) }
         )
         #else
-        gesture(
-            LongPressGesture(minimumDuration: 0.16)
-                .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("game")))
-                .onChanged { value in
-                    if case let .second(_, drag?) = value { onChanged(piece, drag.location) }
-                }
-                .onEnded { value in
-                    if case let .second(_, drag?) = value { onEnded(piece, drag.location) }
-                }
-        )
+        gesture(TrayPan(scrollsVertically: placement == .trailing,
+                        onChanged: { onChanged(piece, $0) }, onEnded: { onEnded(piece, $0) }))
         #endif
     }
 }
+
+#if canImport(UIKit)
+private struct TrayPan: UIGestureRecognizerRepresentable {
+    let scrollsVertically: Bool
+    let onChanged: (CGPoint) -> Void
+    let onEnded: (CGPoint) -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    func makeUIGestureRecognizer(context: Context) -> DirectionalPan {
+        let pan = DirectionalPan()
+        pan.scrollsVertically = scrollsVertically
+        pan.maximumNumberOfTouches = 1
+        pan.delegate = context.coordinator
+        return pan
+    }
+
+    func updateUIGestureRecognizer(_ pan: DirectionalPan, context: Context) {
+        pan.scrollsVertically = scrollsVertically
+    }
+
+    func handleUIGestureRecognizerAction(_ pan: DirectionalPan, context: Context) {
+        let location = context.converter.convert(globalPoint: pan.location(in: nil), to: .named("game"))
+        switch pan.state {
+        case .changed: onChanged(location)
+        case .ended: onEnded(location)
+        // A cancelled drag must not place the piece: a point outside the
+        // board just clears the ghost.
+        case .cancelled, .failed: onEnded(CGPoint(x: -1, y: -1))
+        default: break
+        }
+    }
+
+    /// A pan that fails on its own when the first 10pt run along the scroll
+    /// axis. Scroll flicks are nearly straight; anything steeper than about
+    /// 20° off the axis is a piece on its way to the board.
+    final class DirectionalPan: UIPanGestureRecognizer {
+        var scrollsVertically = true
+        private var start: CGPoint?
+
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            start = touches.first?.location(in: nil)
+            super.touchesBegan(touches, with: event)
+        }
+
+        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+            if state == .possible, let start, let point = touches.first?.location(in: nil) {
+                let dx = abs(point.x - start.x), dy = abs(point.y - start.y)
+                guard hypot(dx, dy) >= 10 else { return }
+                let (along, across) = scrollsVertically ? (dy, dx) : (dx, dy)
+                if across <= along * 0.4 { state = .failed; return }
+            }
+            super.touchesMoved(touches, with: event)
+        }
+
+        override func reset() {
+            start = nil
+            super.reset()
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        /// The scroll view's own pan waits for this one to decide.
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer,
+                               shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            other.view is UIScrollView
+        }
+    }
+}
+#endif
