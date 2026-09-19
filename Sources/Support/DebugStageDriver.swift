@@ -81,6 +81,16 @@ enum DebugStageDriver {
         default:
             break
         }
+        #if canImport(UIKit)
+        // `simctl` cannot rotate a simulator; `--landscape` rotates the scene
+        // once the stage is up, the way a player turns the phone mid-game.
+        if CommandLine.arguments.contains("--landscape") || CommandLine.arguments.contains("--landscape-left") {
+            let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let orientation: UIInterfaceOrientationMask = CommandLine.arguments.contains("--landscape-left") ? .landscapeLeft : .landscapeRight
+            scene?.requestGeometryUpdate(.iOS(interfaceOrientations: orientation))
+            await settle(1.0)
+        }
+        #endif
     }
 
     /// Snaps pieces into place through the real drag path, so what ends up on

@@ -15,7 +15,6 @@ struct GameView: View {
 
     private var controller: BoardInputController { model.boardController }
     @State private var trayDrag: TrayDrag?
-    @State private var boardFrame: CGRect = .zero
     @State private var showOriginal = false
     @State private var didLoad = false
 
@@ -60,14 +59,14 @@ struct GameView: View {
                         HStack(spacing: 0) {
                             board
                             Theme.hairline.frame(width: 1)
-                            tray(placement: placement)
+                            tray(placement: placement, in: proxy.size)
                                 .frame(width: trayThickness(for: proxy.size))
                         }
                     } else {
                         VStack(spacing: 0) {
                             board
                             Theme.hairline.frame(height: 1)
-                            tray(placement: placement)
+                            tray(placement: placement, in: proxy.size)
                                 .frame(height: trayThickness(for: proxy.size))
                         }
                     }
@@ -94,25 +93,24 @@ struct GameView: View {
 
     private var board: some View {
         BoardView(session: session, settings: settings, controller: controller)
-            .overlay {
-                GeometryReader { proxy in
-                    Color.clear.onGeometryChange(for: CGRect.self) {
-                        $0.frame(in: .named("game"))
-                    } action: { boardFrame = $0 }
-                }
-            }
             .overlay(alignment: .bottomLeading) { statusBar.padding(isCompact ? 14 : 18) }
             .overlay(alignment: .bottomTrailing) { zoomControls.padding(isCompact ? 14 : 18) }
     }
 
-    private func tray(placement: TrayPlacement) -> some View {
-        TrayView(session: session, placement: placement, onScatter: placement == .trailing ? { session.scatterTray() } : nil) { piece, location in
+    /// The board fills the game space up to the tray, so its frame is derived
+    /// from the layout numbers rather than measured: a measured frame goes
+    /// stale during the rotation animation and rejects drops on half the board.
+    private func tray(placement: TrayPlacement, in size: CGSize) -> some View {
+        let thickness = trayThickness(for: size)
+        let boardFrame = CGRect(origin: .zero, size: placement == .trailing
+                                ? CGSize(width: size.width - thickness, height: size.height)
+                                : CGSize(width: size.width, height: size.height - thickness))
+        return TrayView(session: session, placement: placement, onScatter: placement == .trailing ? { session.scatterTray() } : nil) { piece, location in
             trayDrag = TrayDrag(piece: piece, location: location)
         } onEnded: { piece, location in
             trayDrag = nil
             guard boardFrame.contains(location) else { return }
-            let boardPoint = session.viewport.board(CGPoint(x: location.x - boardFrame.minX,
-                                                            y: location.y - boardFrame.minY))
+            let boardPoint = session.viewport.board(location)
             let outcome = session.placePieceFromTray(piece, at: boardPoint,
                                                      viewScale: session.viewport.scale,
                                                      assist: settings.snapAssist)
@@ -258,7 +256,7 @@ struct GameView: View {
         }
         .padding(.horizontal, isCompact ? 12 : 22)
         .frame(height: isCompact ? 56 : 70)
-        .background(Theme.card)
+        .background(Theme.card.ignoresSafeArea())
     }
 
     @ViewBuilder

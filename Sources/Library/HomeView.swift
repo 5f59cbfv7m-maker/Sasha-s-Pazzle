@@ -42,6 +42,10 @@ struct HomeView: View {
             }
         }
         .background(Theme.bg.ignoresSafeArea())
+        // Solid status bar: pictures scrolling under the clock made it unreadable.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Color.clear.frame(height: 0).background(Theme.bg.ignoresSafeArea(edges: .top))
+        }
         .fileImporter(isPresented: $isImportingFiles,
                       allowedContentTypes: [.image], allowsMultipleSelection: true) { result in
             handleFileImport(result)
@@ -244,7 +248,7 @@ struct HomeView: View {
             .padding(.horizontal, gutter)
             .padding(.vertical, 14)
         }
-        .background(Theme.bg.opacity(0.92))
+        .background(Theme.bg)
         .overlay(alignment: .top) { Theme.hairline.frame(height: 1) }
         .overlay(alignment: .bottom) { Theme.hairline.frame(height: 1) }
     }

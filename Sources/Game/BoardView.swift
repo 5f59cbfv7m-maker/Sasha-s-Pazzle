@@ -12,6 +12,9 @@ final class BoardInputController: BoardEventHandling {
     private(set) var hoverPoint: CGPoint?
 
     @ObservationIgnored private var textureRefresh: Task<Void, Never>?
+    @ObservationIgnored private var refit: Task<Void, Never>?
+    /// The view size the board was last fitted to; a flip of its aspect is a rotation.
+    @ObservationIgnored private var fittedSize: CGSize = .zero
 
     func boardPointerDown(at point: CGPoint, isSecondary: Bool) -> Bool {
         guard let session, session.phase == .playing else { return false }
@@ -68,17 +71,29 @@ final class BoardInputController: BoardEventHandling {
         // `Viewport` is `Equatable`; skipping the no-op write keeps a resize
         // drag from invalidating the board on every frame.
         if adjusted != session.viewport { session.viewport = adjusted }
+        // Turning the device swaps the axes, which leaves the picture mostly
+        // off screen. Rotation arrives as several sizes, so fit once it settles.
+        if (fittedSize.width > fittedSize.height) != (viewSize.width > viewSize.height) {
+            refit?.cancel()
+            refit = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled, let self else { return }
+                fitBoard()
+            }
+        }
     }
 
     func fitBoard(padding: CGFloat = 40) {
         guard let session, viewSize.width > 1 else { return }
         session.viewport = .fitting(content: session.boardRect, in: viewSize, padding: padding)
+        fittedSize = viewSize
         scheduleTextureRefresh()
     }
 
     func fitTable() {
         guard let session, viewSize.width > 1 else { return }
         session.viewport = .fitting(content: session.tableRect, in: viewSize, padding: 16)
+        fittedSize = viewSize
         scheduleTextureRefresh()
     }
 

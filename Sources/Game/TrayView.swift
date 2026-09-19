@@ -172,14 +172,17 @@ private struct TrayPan: UIGestureRecognizerRepresentable {
     }
 
     /// A pan that fails on its own when the first 10pt run along the scroll
-    /// axis. Scroll flicks are nearly straight; anything steeper than about
-    /// 20° off the axis is a piece on its way to the board.
+    /// axis. Scroll flicks are nearly straight and immediate; anything steeper
+    /// than about 20° off the axis, or a finger that rested on the piece for a
+    /// quarter second first, is a piece on its way to the board.
     final class DirectionalPan: UIPanGestureRecognizer {
         var scrollsVertically = true
         private var start: CGPoint?
+        private var startTime: TimeInterval = 0
 
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
             start = touches.first?.location(in: nil)
+            startTime = event.timestamp
             super.touchesBegan(touches, with: event)
         }
 
@@ -188,7 +191,8 @@ private struct TrayPan: UIGestureRecognizerRepresentable {
                 let dx = abs(point.x - start.x), dy = abs(point.y - start.y)
                 guard hypot(dx, dy) >= 10 else { return }
                 let (along, across) = scrollsVertically ? (dy, dx) : (dx, dy)
-                if across <= along * 0.4 { state = .failed; return }
+                let held = event.timestamp - startTime > 0.25
+                if !held, across <= along * 0.4 { state = .failed; return }
             }
             super.touchesMoved(touches, with: event)
         }

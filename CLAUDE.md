@@ -130,6 +130,16 @@ pan wait for it. Verify both directions with `touch_path` on the simulator;
 the tray *looks* unscrolled after a flick because rows repeat every 84pt, so
 read `onScrollGeometryChange` rather than trusting a screenshot.
 
+**Measured frames go stale across a rotation.** `onGeometryChange` reading
+`frame(in: .named("game"))` fires once with the final landscape frame and then
+again with a bogus frame from the rotation animation — and never again. The
+tray's drop test used that frame and rejected drops on the half of the board
+nearest the tray, which is what "pieces cannot be dropped in landscape" really
+was (touch tests with `--tray-trailing` never rotate, so they never saw it).
+`GameView` now derives the board frame from the same numbers that lay it out.
+Rotation also arrives as several sizes; `handleResize` re-fits once the aspect
+has flipped and the sizes have settled. Reproduce with `--landscape`.
+
 **Resources are flattened.** `Sources/` is a synchronized folder, so anything
 under `Sources/Resources/` lands in the bundle root — `Pictures/sea_X.jpg`
 becomes `sea_X.jpg`, which is why `LibraryCatalog.bundled()` and
