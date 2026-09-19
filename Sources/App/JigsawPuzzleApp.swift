@@ -4,6 +4,8 @@ import SwiftUI
 struct JigsawPuzzleApp: App {
     @State private var model = AppModel()
 
+    init() { Fonts.register() }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -19,7 +21,6 @@ struct JigsawPuzzleApp: App {
         .commands { GameCommands(model: model) }
         #if os(macOS)
         .defaultSize(width: 1320, height: 880)
-        .windowToolbarStyle(.unified)
         #endif
 
         #if os(macOS)

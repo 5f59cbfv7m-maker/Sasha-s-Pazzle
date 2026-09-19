@@ -26,6 +26,16 @@ nonisolated enum LibraryCatalog {
 
     static var count: Int { selection.count }
 
+    /// The daily puzzle is always played at this size.
+    static let dailyPieces = 150
+
+    /// One built-in picture per calendar day.
+    static func dailyItem(on date: Date = .now) -> LibraryItem {
+        let items = builtIn()
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: date) ?? 0
+        return items[day % items.count]
+    }
+
     static func identifier(family: ArtFamily, variant: Int) -> String {
         "gen.\(family.rawValue).\(variant)"
     }
@@ -33,7 +43,10 @@ nonisolated enum LibraryCatalog {
     /// The built-in pictures. Creating them is pure arithmetic — no I/O, no
     /// decoding — so the library screen appears instantly and the bitmaps are
     /// produced lazily as cells scroll into view.
-    static func builtIn() -> [LibraryItem] {
+    static func builtIn() -> [LibraryItem] { items }
+
+    /// Built once: the list is pure, and the profile asks for it on every layout pass.
+    private static let items: [LibraryItem] =
         selection.map { family, variant in
             LibraryItem(
                 id: identifier(family: family, variant: variant),
@@ -43,5 +56,4 @@ nonisolated enum LibraryCatalog {
                 addedAt: .distantPast,
                 aspect: family.preferredAspect)
         }
-    }
 }

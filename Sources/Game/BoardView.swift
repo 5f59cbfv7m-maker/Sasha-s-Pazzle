@@ -152,17 +152,17 @@ struct BoardView: View {
         let plateRect = viewport.screen(session.boardRect)
         let corner = min(14, max(2, 10 * viewport.scale))
         let plate = Path(roundedRect: plateRect, cornerRadius: corner)
-        context.fill(plate, with: .color(.black.opacity(0.10)))
+        context.fill(plate, with: .color(Theme.text.opacity(0.06)))
 
         if settings.showGhostImage, let ghost = session.ghostImage {
             // Strong enough to guide, faint enough that a placed piece still
             // reads as clearly "on top of" the empty board.
             var ghostLayer = context
-            ghostLayer.opacity = 0.24
+            ghostLayer.opacity = 0.2
             ghostLayer.clip(to: plate)
             ghostLayer.draw(ghost, in: plateRect)
         }
-        context.stroke(plate, with: .color(.primary.opacity(0.22)), lineWidth: 1.5)
+        context.stroke(plate, with: .color(Theme.text.opacity(0.12)), lineWidth: 2)
 
         guard !textures.images.isEmpty else { return }
 
@@ -214,9 +214,13 @@ struct BoardView: View {
             guard rect.intersects(visible) else { continue }
             var glow = context
             glow.blendMode = .plusLighter
-            glow.opacity = (1 - progress) * 0.9
-            glow.addFilter(.colorMultiply(Color(red: 0.25, green: 1.0, blue: 0.45)))
+            glow.opacity = (1 - progress) * 0.7
+            glow.addFilter(.colorMultiply(Theme.sage))
             glow.draw(image, in: rect)
+            // The snap ring: a sage stroke that swells and fades.
+            let ring = Path(roundedRect: rect.insetBy(dx: -4 - 10 * progress, dy: -4 - 10 * progress),
+                            cornerRadius: 16)
+            context.stroke(ring, with: .color(Theme.sage.opacity((1 - progress) * 0.9)), lineWidth: 5)
         }
     }
 
@@ -231,9 +235,9 @@ struct BoardView: View {
         let outline = Path(session.path(for: Int(piece))).applying(transform)
         let pulse = 0.55 + 0.45 * sin(now.timeIntervalSinceReferenceDate * 6)
 
-        context.fill(outline, with: .color(.accentColor.opacity(0.22 * pulse)))
-        context.stroke(outline, with: .color(.accentColor.opacity(0.55 + 0.45 * pulse)),
-                       style: StrokeStyle(lineWidth: 2.5, dash: [7, 5]))
+        context.fill(outline, with: .color(Theme.accent.opacity(0.18 * pulse)))
+        context.stroke(outline, with: .color(Theme.accent.opacity(0.18 * pulse)), lineWidth: 12)
+        context.stroke(outline, with: .color(Theme.accent.opacity(0.55 + 0.45 * pulse)), lineWidth: 4)
 
         // Trace from the piece's current spot to where it belongs.
         if let group = session.state.group(of: piece) {
@@ -245,25 +249,25 @@ struct BoardView: View {
             var line = Path()
             line.move(to: from)
             line.addLine(to: to)
-            context.stroke(line, with: .color(.accentColor.opacity(0.5)),
+            context.stroke(line, with: .color(Theme.accent.opacity(0.5)),
                            style: StrokeStyle(lineWidth: 2, dash: [4, 6]))
         }
     }
 }
 
-/// Subtle felt-like table behind the puzzle.
+/// The warm table behind the puzzle, with two soft circles for air.
 private struct BoardBackdrop: View {
-    @Environment(\.colorScheme) private var scheme
-
     var body: some View {
-        LinearGradient(colors: scheme == .dark
-                       ? [Color(white: 0.10), Color(white: 0.055)]
-                       : [Color(white: 0.92), Color(white: 0.84)],
-                       startPoint: .top, endPoint: .bottom)
-        .overlay(alignment: .center) {
-            RadialGradient(colors: [.white.opacity(scheme == .dark ? 0.05 : 0.5), .clear],
-                           center: .center, startRadius: 0, endRadius: 700)
+        ZStack {
+            Theme.bg
+            GeometryReader { proxy in
+                Blob(size: 340).opacity(0.8)
+                    .position(x: 80, y: proxy.size.height + 50)
+                Blob(color: Theme.blob2, size: 200).opacity(0.7)
+                    .position(x: proxy.size.width - 160, y: 20)
+            }
         }
+        .clipped()
         .ignoresSafeArea()
     }
 }

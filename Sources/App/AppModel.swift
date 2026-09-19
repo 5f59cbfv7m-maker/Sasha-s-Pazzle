@@ -14,11 +14,29 @@ final class AppModel {
 
     let settings = AppSettings()
     let library = PhotoLibraryStore()
+    let stats = PlayerStats()
     /// Shared so the menu bar can drive zoom and fit without reaching into views.
     let boardController = BoardInputController()
 
+    enum Sheet: String, Identifiable {
+        case onboarding, settings, profile
+        var id: String { rawValue }
+    }
+
     var path: [Route] = []
-    var showSettings = false
+    /// The one modal over the root. A single stored value, because several
+    /// `.sheet` modifiers on one view stop presenting after the first dismissal.
+    var sheet: Sheet?
+    var showSettings: Bool {
+        get { sheet == .settings }
+        set { sheet = newValue ? .settings : nil }
+    }
+    var showProfile: Bool {
+        get { sheet == .profile }
+        set { sheet = newValue ? .profile : nil }
+    }
+    /// Record and achievement news for the game that just finished.
+    private(set) var lastCompletion: CompletionSummary?
     private(set) var session: GameSession?
     private(set) var savedGames: [GameSnapshot] = []
 
@@ -50,7 +68,20 @@ final class AppModel {
         session?.saveNow()
         session?.textures.cancel()
         session = GameSession(item: item, aspect: aspect, targetPieces: pieces)
+        attach(session)
         path = [.game]
+    }
+
+    func startDaily() {
+        start(item: LibraryCatalog.dailyItem(), aspect: .original, pieces: LibraryCatalog.dailyPieces)
+    }
+
+    private func attach(_ session: GameSession?) {
+        lastCompletion = nil
+        session?.onComplete = { [weak self] finished in
+            guard let self else { return }
+            lastCompletion = stats.record(finished)
+        }
     }
 
     func resume(_ snapshot: GameSnapshot) {
@@ -63,6 +94,7 @@ final class AppModel {
         session?.saveNow()
         session?.textures.cancel()
         session = GameSession(snapshot: snapshot)
+        attach(session)
         path = [.game]
     }
 

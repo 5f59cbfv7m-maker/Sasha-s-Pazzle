@@ -2,7 +2,7 @@
   <img src="docs/icon.png" width="128" alt="App icon">
 </p>
 
-<h1 align="center">Sasha's Pazzle</h1>
+<h1 align="center">Sasha's Puzzles</h1>
 
 <p align="center">
   A native Apple jigsaw puzzle for <b>macOS, iPadOS and iOS</b>, written in Swift 6 and SwiftUI.<br>
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/platforms-macOS%2015%20%7C%20iOS%2018%20%7C%20iPadOS%2018-1B7FD1" alt="Platforms">
   <img src="https://img.shields.io/badge/Swift-6.0-F05138" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-16%2B-147EFB" alt="Xcode 16+">
-  <img src="https://img.shields.io/badge/tests-53%20passing-3FB950" alt="53 tests passing">
+  <img src="https://img.shields.io/badge/tests-63%20passing-3FB950" alt="63 tests passing">
   <img src="https://img.shields.io/badge/dependencies-none-8B949E" alt="No dependencies">
   <img src="https://img.shields.io/badge/offline-100%25-8B949E" alt="Works offline">
 </p>
@@ -24,7 +24,7 @@
 </p>
 
 The Xcode target, scheme and bundle identifier stay `JigsawPuzzle`; only the name
-the app shows on screen is *Sasha's Pazzle*.
+the app shows on screen is *Sasha's Puzzles*.
 
 ---
 

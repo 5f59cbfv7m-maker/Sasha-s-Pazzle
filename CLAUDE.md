@@ -12,13 +12,13 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **60 tests in 7 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **63 tests in 8 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
 onto the Desktop (or wherever) so it can be launched without Xcode.
 
-The product is named `Sasha's Pazzle.app` (`PRODUCT_NAME`), but the Swift module
+The product is named `Sasha's Puzzles.app` (`PRODUCT_NAME`), but the Swift module
 and every import stay `JigsawPuzzle` (`PRODUCT_MODULE_NAME`). Do not "fix" that
 mismatch — it is deliberate.
 
@@ -32,6 +32,8 @@ mismatch — it is deliberate.
 | `Sources/Interaction/` | `Viewport`, `BoardEventView` (AppKit/UIKit input bridge) |
 | `Sources/Game/` | `GameSession` plus the playing screen |
 | `Sources/Library/` | Image pipeline, caches, photo import, home screen |
+| `Sources/Persistence/PlayerStats.swift` | Solved-game records; streak, best times, achievements and the weekly chart are all derived from them |
+| `Sources/Support/Theme.swift` | Design tokens (colours, type), shared controls (`PillButton`, `RoundIconButton`, `PillSegments`), the `PuzzleMark` logo |
 
 `Engine/` and `Art/` know nothing about SwiftUI. Keep it that way — that is what
 makes them unit-testable and safe to run off the main thread.
@@ -76,6 +78,33 @@ layout wider than the phone screen and pushes the HUD and toolbar off both edges
 Guard it with `#if os(macOS)`. This bites **sheets** as well as the root window —
 `SettingsView` and `OriginalImageSheet` each carried an unguarded minimum long
 after the window itself was fixed.
+
+**Dynamic colours must be `nonisolated`.** `Theme` builds its colours from
+`UIColor { traits in … }` / `NSColor(name:dynamicProvider:)`. SwiftUI resolves
+those providers on its render thread; with main-actor default isolation the
+closure traps (`dispatch_assert_queue`) the first time the theme changes. Keep
+`Theme` and its helpers `nonisolated`.
+
+**`.toolbar(.hidden)` is per screen.** Every screen draws its own header, so the
+system bar is hidden — but the modifier on the root view does not reach pushed
+destinations; on iPadOS 27 a floating back button appears. `RootView` applies it
+inside the `navigationDestination` closure as well.
+
+**One `.sheet` per view, stored on the model.** Several `.sheet` modifiers on
+the root stop presenting after the first dismissal, and a hand-made `Binding`
+whose getter reads the model is not observation-tracked. `AppModel.sheet` is
+the single source; `showSettings`/`showProfile` are computed over it.
+
+**Sheets are `.presentationSizing(.page)`, on the content.** A content-sized
+form sheet whose content adapts to `horizontalSizeClass` (or an adaptive
+`LazyVGrid`) resizes the sheet, which changes the size class, which re-lays
+out the content — the main thread spins at 100 % and the sheet never appears.
+The modifier belongs inside the sheet closure, not on the presenter.
+
+**Bundled fonts have no Cyrillic.** Caprasimo and Figtree cover Latin only;
+`Theme` attaches a CoreText cascade list so Russian falls back to SF Rounded
+Heavy / SF at the same weight instead of a thin default. Fonts are memoised
+because a fresh `CTFont` per call is a new `Font` value every render.
 
 **Tests must inject a temp `SaveStore`**, otherwise they write into the player's
 real saved games. `GameSession.init(..., saveStore:)` exists for this.

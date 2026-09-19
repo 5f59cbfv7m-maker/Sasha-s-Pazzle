@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA00000000000000000000D1"
-               BuildableName = "Sasha&apos;s Pazzle.app"
+               BuildableName = "Sasha&apos;s Puzzles.app"
                BlueprintName = "JigsawPuzzle"
                ReferencedContainer = "container:JigsawPuzzle.xcodeproj">
             </BuildableReference>
@@ -55,7 +55,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AA00000000000000000000D1"
-            BuildableName = "Sasha&apos;s Pazzle.app"
+            BuildableName = "Sasha&apos;s Puzzles.app"
             BlueprintName = "JigsawPuzzle"
             ReferencedContainer = "container:JigsawPuzzle.xcodeproj">
          </BuildableReference>
@@ -72,7 +72,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AA00000000000000000000D1"
-            BuildableName = "Sasha&apos;s Pazzle.app"
+            BuildableName = "Sasha&apos;s Puzzles.app"
             BlueprintName = "JigsawPuzzle"
             ReferencedContainer = "container:JigsawPuzzle.xcodeproj">
          </BuildableReference>

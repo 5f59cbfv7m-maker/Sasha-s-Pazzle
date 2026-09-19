@@ -55,6 +55,8 @@ final class GameSession {
     var selectedPiece: Int32?
 
     private(set) var elapsed: TimeInterval = 0
+    /// Fired once when the last group locks into place; the app records stats here.
+    @ObservationIgnored var onComplete: ((GameSession) -> Void)?
     private(set) var canUndo = false
     private(set) var canRedo = false
 
@@ -437,6 +439,7 @@ final class GameSession {
             for id in state.groups.keys { state.setTranslation(.zero, forGroup: id) }
         }
         saveNow()
+        onComplete?(self)
     }
 
     /// Starts the clock without loading pixels. Used by tests, which exercise

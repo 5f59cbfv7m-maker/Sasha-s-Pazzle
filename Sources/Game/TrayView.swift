@@ -7,45 +7,57 @@ import SwiftUI
 struct TrayView: View {
     let session: GameSession
     let placement: TrayPlacement
+    /// Footer action; `nil` hides the footer (the phone keeps it in the menu).
+    var onScatter: (() -> Void)?
     let onChanged: (Int32, CGPoint) -> Void
     let onEnded: (Int32, CGPoint) -> Void
 
-    private let cellSize: CGFloat = 62
+    private var cellSize: CGFloat { placement == .trailing ? 74 : 63 }
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
             if session.state.trayOrder.isEmpty {
                 emptyState
             } else {
                 pieceGrid
             }
+            if let onScatter, placement == .trailing {
+                Theme.hairline.frame(height: 1)
+                PillButton(title: "Scatter on the table", style: .secondary, size: 16, expand: true, action: onScatter)
+                    .disabled(session.phase != .playing || session.state.trayOrder.isEmpty)
+                    .padding(EdgeInsets(top: 14, leading: 20, bottom: 20, trailing: 20))
+            }
         }
-        .background(.background.secondary)
+        .background(Theme.surface)
     }
 
     private var header: some View {
         HStack {
             Text("Pieces")
-                .font(.headline)
+                .font(Theme.display(placement == .trailing ? 19 : 17))
             Spacer()
             Text("\(session.state.trayOrder.count)")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .font(Theme.body(14, .bold).monospacedDigit())
+                .foregroundStyle(Theme.muted)
+                .padding(.horizontal, 12).padding(.vertical, 4)
+                .background(Theme.card, in: Capsule())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, placement == .trailing ? 20 : 16)
+        .padding(.top, placement == .trailing ? 18 : 12)
+        .padding(.bottom, placement == .trailing ? 12 : 10)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "checkmark.circle")
-                .font(.title2)
-                .foregroundStyle(.tint)
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(Theme.onSageTint)
+                .frame(width: 64, height: 64)
+                .background(Theme.sageTint, in: Circle())
             Text("All pieces are on the table")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(Theme.body(15))
+                .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -54,18 +66,18 @@ struct TrayView: View {
 
     @ViewBuilder
     private var pieceGrid: some View {
-        let columns = [GridItem(.adaptive(minimum: cellSize, maximum: cellSize), spacing: 6)]
-        let rows = [GridItem(.adaptive(minimum: cellSize, maximum: cellSize), spacing: 6)]
+        let columns = [GridItem(.adaptive(minimum: cellSize, maximum: cellSize), spacing: 10)]
+        let rows = [GridItem(.adaptive(minimum: cellSize, maximum: cellSize), spacing: 10)]
 
         if placement == .trailing {
             ScrollView(.vertical) {
-                LazyVGrid(columns: columns, spacing: 6) { cells }
-                    .padding(8)
+                LazyVGrid(columns: columns, spacing: 10) { cells }
+                    .padding(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
             }
         } else {
             ScrollView(.horizontal) {
-                LazyHGrid(rows: rows, spacing: 6) { cells }
-                    .padding(8)
+                LazyHGrid(rows: rows, spacing: 10) { cells }
+                    .padding(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
             }
         }
     }
@@ -87,16 +99,18 @@ private struct TrayCell: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.quaternary.opacity(0.5))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Theme.card)
+                .shadow(color: .black.opacity(0.14), radius: 1.5, y: 1)
             if let image {
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .padding(3)
+                    .padding(6)
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 3)
             } else {
                 Image(systemName: "puzzlepiece")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.track)
             }
         }
         .frame(width: size, height: size)

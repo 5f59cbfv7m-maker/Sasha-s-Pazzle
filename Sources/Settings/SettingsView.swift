@@ -8,69 +8,144 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var settings = model.settings
 
-        NavigationStack {
-            Form {
-                Section("Appearance") {
-                    Picker("Theme", selection: $settings.appearance) {
-                        ForEach(AppSettings.Appearance.allCases) { Text($0.title).tag($0) }
-                    }
-                    Toggle("Show picture guide on the board", isOn: $settings.showGhostImage)
-                    Toggle("Outline pieces", isOn: $settings.showPieceOutlines)
-                }
+        VStack(spacing: 0) {
+            HStack {
+                Text("Settings").font(Theme.display(28))
+                Spacer()
+                PillButton(title: "Done", size: 15) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(EdgeInsets(top: 26, leading: 26, bottom: 18, trailing: 26))
 
-                Section("Feedback") {
-                    Toggle("Sound", isOn: $settings.soundEnabled)
-                    Toggle("Haptic feedback", isOn: $settings.hapticsEnabled)
-                }
-
-                Section("Gameplay") {
-                    Picker("Snap assist", selection: $settings.snapAssist) {
-                        ForEach(SnapAssist.allCases) { Text($0.title).tag($0) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    group("Appearance") {
+                        row("Theme") {
+                            PillSegments(options: AppSettings.Appearance.allCases,
+                                         selection: $settings.appearance) { $0.title }
+                        }
+                        toggle("Picture guide on the table", $settings.showGhostImage)
+                        toggle("Outline pieces", $settings.showPieceOutlines)
                     }
-                    Picker("Default difficulty", selection: $settings.defaultDifficulty) {
-                        ForEach(Difficulty.allCases) {
-                            Text("\($0.title) · \($0.targetPieces)").tag($0)
+                    group("Feedback") {
+                        toggle("Snap sound", $settings.soundEnabled)
+                        #if os(iOS)
+                        toggle("Haptic feedback", $settings.hapticsEnabled)
+                        #endif
+                    }
+                    group("Gameplay") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("Snap assist").font(Theme.body(16))
+                                Spacer()
+                                Text(settings.snapAssist.title)
+                                    .font(Theme.body(14, .bold)).foregroundStyle(Theme.accentDeep)
+                            }
+                            PillSegments(options: SnapAssist.allCases,
+                                         selection: $settings.snapAssist, title: { $0.title }, expand: true)
+                        }
+                        .padding(EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14))
+                        row("Default difficulty") {
+                            Picker("Default difficulty", selection: $settings.defaultDifficulty) {
+                                ForEach(Difficulty.allCases) {
+                                    Text("\($0.title) · \($0.targetPieces)").tag($0)
+                                }
+                            }
+                            .labelsHidden()
+                        }
+                        row("Default framing") {
+                            Picker("Default framing", selection: $settings.defaultAspect) {
+                                ForEach(PuzzleAspect.allCases) { Text($0.title).tag($0) }
+                            }
+                            .labelsHidden()
                         }
                     }
-                    Picker("Default framing", selection: $settings.defaultAspect) {
-                        ForEach(PuzzleAspect.allCases) { Text($0.title).tag($0) }
+                    group("Saved games") {
+                        row("Saved games") {
+                            Text("\(model.savedGames.count)")
+                                .font(Theme.body(14, .bold)).foregroundStyle(Theme.muted)
+                                .padding(.horizontal, 11).padding(.vertical, 3)
+                                .background(Theme.surface, in: Capsule())
+                        }
+                        row("Puzzles solved") {
+                            Text("\(model.stats.puzzlesSolved)")
+                                .font(Theme.body(14, .bold)).foregroundStyle(Theme.muted)
+                                .padding(.horizontal, 11).padding(.vertical, 3)
+                                .background(Theme.surface, in: Capsule())
+                        }
+                        Button { confirmReset = true } label: {
+                            Text("Reset saved games and statistics")
+                                .font(Theme.body(16, .bold))
+                                .foregroundStyle(Theme.accentDeep)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
+                    Text("Sasha's Puzzles · \(LibraryCatalog.count) built-in pictures · \(model.library.userItems.count) of your photos · works entirely offline")
+                        .font(Theme.body(13))
+                        .foregroundStyle(Theme.faint)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
                 }
-
-                Section("Saved games") {
-                    LabeledContent("Saved games", value: "\(model.savedGames.count)")
-                    Button("Reset saved games", role: .destructive) { confirmReset = true }
-                }
-
-                Section("About") {
-                    LabeledContent("Built-in pictures", value: "\(LibraryCatalog.count)")
-                    LabeledContent("My photos", value: "\(model.library.userItems.count)")
-                    Text("Pictures are generated on your device and stored locally. The game works entirely offline.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+                .padding(EdgeInsets(top: 0, leading: 22, bottom: 26, trailing: 22))
             }
-            .formStyle(.grouped)
-            .navigationTitle("Settings")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+        }
+        .background(Theme.surface)
+        .tint(Theme.accent)
+        .foregroundStyle(Theme.text)
+        .confirmationDialog("Delete all saved games and statistics?", isPresented: $confirmReset,
+                            titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                model.deleteAllSaves()
+                model.stats.reset()
             }
-            .confirmationDialog("Delete all saved games?", isPresented: $confirmReset,
-                                titleVisibility: .visible) {
-                Button("Delete", role: .destructive) { model.deleteAllSaves() }
-                Button("Cancel", role: .cancel) {}
-            }
+            Button("Cancel", role: .cancel) {}
         }
         // A minimum size is a *window* constraint: the macOS Settings scene needs
         // one, but on iOS this sheet is the phone screen and 460pt forces the
         // form wider than it, clipping the Done button off the trailing edge.
         #if os(macOS)
-        .frame(minWidth: 460, minHeight: 480)
+        .frame(minWidth: 520, minHeight: 600)
         #endif
+    }
+
+    // MARK: - Building blocks
+
+    private func group<Content: View>(_ title: LocalizedStringKey,
+                                      @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Kicker(text: title).padding(.horizontal, 12)
+            Group(subviews: content()) { rows in
+                VStack(spacing: 0) {
+                    ForEach(rows) { row in
+                        row
+                        if row.id != rows.last?.id {
+                            Theme.hairline.frame(height: 1).padding(.horizontal, 14)
+                        }
+                    }
+                }
+            }
+            .padding(6)
+                .background(Theme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+    }
+
+    private func row<Trailing: View>(_ title: LocalizedStringKey,
+                                     @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack(spacing: 12) {
+            Text(title).font(Theme.body(16))
+            Spacer()
+            trailing()
+        }
+        .padding(EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14))
+    }
+
+    private func toggle(_ title: LocalizedStringKey, _ isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) { Text(title).font(Theme.body(16)) }
+            .toggleStyle(.switch)
+            .padding(EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14))
     }
 }

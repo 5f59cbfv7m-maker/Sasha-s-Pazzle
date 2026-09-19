@@ -1,0 +1,179 @@
+import SwiftUI
+
+/// Profile and statistics: totals, the weekly chart and the achievement wall.
+struct ProfileView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.isCompact) private var isCompact
+
+    private var stats: PlayerStats { model.stats }
+    private var gutter: CGFloat { isCompact ? 18 : 30 }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                header
+                tiles
+                chart
+                achievements
+            }
+            .padding(EdgeInsets(top: 26, leading: gutter, bottom: 30, trailing: gutter))
+        }
+        .background(Theme.bg)
+        .foregroundStyle(Theme.text)
+        #if os(macOS)
+        .frame(minWidth: 640, minHeight: 720)
+        #endif
+    }
+
+    private var header: some View {
+        HStack(spacing: 16) {
+            Text(String(localized: "Sasha").prefix(1))
+                .font(Theme.display(26))
+                .foregroundStyle(Theme.onAccent)
+                .frame(width: 64, height: 64)
+                .background(Theme.accent, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sasha").font(Theme.display(26))
+                Text(subtitle).font(Theme.body(14)).foregroundStyle(Theme.muted)
+            }
+            Spacer()
+            RoundIconButton(symbol: "gearshape") {
+                dismiss()
+                model.showSettings = true
+            }
+            .accessibilityLabel(Text("Settings"))
+            PillButton(title: "Done", size: 15) { dismiss() }
+                .keyboardShortcut(.cancelAction)
+        }
+    }
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if let first = stats.firstPlayed {
+            // "MMMM" is the genitive month in Russian ("с сентября"); the
+            // FormatStyle equivalent gives the standalone form.
+            let month = DateFormatter()
+            month.dateFormat = "MMMM"
+            parts.append(String(localized: "At the table since \(month.string(from: first))"))
+        }
+        if stats.streak > 0 { parts.append(String(localized: "\(stats.streak) days in a row")) }
+        return parts.isEmpty ? String(localized: "The first puzzle is waiting") : parts.joined(separator: " · ")
+    }
+
+    private var tiles: some View {
+        // Fixed column counts: an adaptive grid in a form sheet sizes the sheet
+        // from its content and the columns from the sheet — an endless loop.
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: isCompact ? 2 : 4),
+                  spacing: 12) {
+            tile("\(stats.puzzlesSolved)", "puzzles solved")
+            tile(stats.piecesPlaced.formatted(), "pieces placed")
+            tile(hours, "at the table")
+            tile("\(stats.streak)", "days in a row", tinted: true)
+        }
+    }
+
+    private var hours: String {
+        let hours = stats.timePlayed / 3600
+        return hours < 1 ? String(localized: "\(Int(stats.timePlayed / 60)) min")
+                         : String(localized: "\(Int(hours)) h")
+    }
+
+    private func tile(_ value: String, _ title: LocalizedStringKey, tinted: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value).font(Theme.display(30).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
+            Text(title).font(Theme.body(12))
+        }
+        .foregroundStyle(tinted ? Theme.onSageTint : Theme.text)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(EdgeInsets(top: 18, leading: 14, bottom: 18, trailing: 14))
+        .background(tinted ? Theme.sageTint : Theme.card,
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    /// Twelve bars, one per week; the busiest week takes the accent.
+    private var chart: some View {
+        let weeks = stats.weeklyPieces
+        let peak = max(1, weeks.max() ?? 1)
+        return VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Last 12 weeks").font(Theme.display(19))
+                Text("pieces per week").font(Theme.body(13)).foregroundStyle(Theme.faint)
+            }
+            HStack(alignment: .bottom, spacing: 9) {
+                ForEach(Array(weeks.enumerated()), id: \.offset) { _, pieces in
+                    let share = Double(pieces) / Double(peak)
+                    UnevenRoundedRectangle(topLeadingRadius: 12, bottomLeadingRadius: 6,
+                                           bottomTrailingRadius: 6, topTrailingRadius: 12)
+                        .fill(barColor(share, isPeak: pieces == peak && pieces > 0))
+                        .frame(height: max(6, 140 * share))
+                        .frame(maxWidth: .infinity)
+                        .accessibilityLabel(Text("\(pieces) pieces"))
+                }
+            }
+            .frame(height: 140, alignment: .bottom)
+        }
+        .padding(EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24))
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+
+    private func barColor(_ share: Double, isPeak: Bool) -> Color {
+        if isPeak { return Theme.accent }
+        if share > 0.75 { return Theme.sage }
+        if share > 0.5 { return Theme.sageSoft }
+        if share > 0.25 { return Theme.muted.opacity(0.5) }
+        return Theme.track
+    }
+
+    private var achievements: some View {
+        let unlocked = Achievement.allCases.filter { $0.isUnlocked(in: stats) }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Achievements").font(Theme.display(19))
+                Text("\(unlocked.count) of \(Achievement.allCases.count)")
+                    .font(Theme.body(13)).foregroundStyle(Theme.faint)
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: isCompact ? 1 : 2),
+                      spacing: 12) {
+                ForEach(Achievement.allCases) { achievement in
+                    AchievementRow(achievement: achievement, unlocked: unlocked.contains(achievement))
+                }
+            }
+        }
+    }
+}
+
+struct AchievementRow: View {
+    let achievement: Achievement
+    let unlocked: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Group {
+                if unlocked {
+                    Image(systemName: achievement.symbol)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Theme.onAccent)
+                        .frame(width: 48, height: 48)
+                        .background(achievement.category == nil ? Theme.accent : Theme.sage, in: Circle())
+                } else {
+                    Image(systemName: "lock")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Theme.faint)
+                        .frame(width: 48, height: 48)
+                        .overlay(Circle().strokeBorder(Theme.track, style: StrokeStyle(lineWidth: 2, dash: [4, 4])))
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(achievement.title).font(Theme.body(16, .bold)).lineLimit(1)
+                Text(achievement.detail).font(Theme.body(13)).foregroundStyle(Theme.muted).lineLimit(2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+        .background(unlocked ? Theme.card : Theme.surface,
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .opacity(unlocked ? 1 : 0.6)
+        .accessibilityElement(children: .combine)
+    }
+}

@@ -35,6 +35,7 @@ final class AppSettings {
     var defaultAspect: PuzzleAspect { didSet { write(defaultAspect.rawValue, "aspect") } }
     /// Draw a thin outline around every piece; helps on busy pictures.
     var showPieceOutlines: Bool { didSet { write(showPieceOutlines, "outlines") } }
+    var hasSeenOnboarding: Bool { didSet { write(hasSeenOnboarding, "onboarding") } }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -48,6 +49,7 @@ final class AppSettings {
         defaultDifficulty = Difficulty(rawValue: defaults.string(forKey: "difficulty") ?? "") ?? .normal
         defaultAspect = PuzzleAspect(rawValue: defaults.string(forKey: "aspect") ?? "") ?? .original
         showPieceOutlines = defaults.object(forKey: "outlines") as? Bool ?? true
+        hasSeenOnboarding = defaults.bool(forKey: "onboarding")
     }
 
     private func write(_ value: Any, _ key: String) { defaults.set(value, forKey: key) }

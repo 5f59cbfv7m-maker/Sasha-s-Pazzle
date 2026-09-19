@@ -11,9 +11,7 @@ struct GameView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.displayScale) private var displayScale
     @Environment(\.scenePhase) private var scenePhase
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    #endif
+    @Environment(\.isCompact) private var isCompact
 
     private var controller: BoardInputController { model.boardController }
     @State private var trayDrag: TrayDrag?
@@ -27,6 +25,26 @@ struct GameView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            header
+            Theme.hairline.frame(height: 1)
+            content
+        }
+        .background(Theme.bg.ignoresSafeArea())
+        .task(id: session.id) {
+            guard !didLoad else { return }
+            didLoad = true
+            await session.load(displayScale: displayScale, settings: settings,
+                               isNewGame: session.placedCount == 0 && session.elapsed == 0)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { session.handleBackground() }
+        }
+        .onDisappear { session.saveNow() }
+        .sheet(isPresented: $showOriginal) { OriginalImageSheet(session: session) }
+    }
+
+    private var content: some View {
         GeometryReader { proxy in
             let placement: TrayPlacement = trayPlacement(for: proxy.size)
 
@@ -35,14 +53,14 @@ struct GameView: View {
                     if placement == .trailing {
                         HStack(spacing: 0) {
                             board
-                            Divider()
+                            Theme.hairline.frame(width: 1)
                             tray(placement: placement)
                                 .frame(width: trayThickness(for: proxy.size))
                         }
                     } else {
                         VStack(spacing: 0) {
                             board
-                            Divider()
+                            Theme.hairline.frame(height: 1)
                             tray(placement: placement)
                                 .frame(height: trayThickness(for: proxy.size))
                         }
@@ -64,22 +82,6 @@ struct GameView: View {
             }
             .coordinateSpace(.named("game"))
         }
-        .navigationTitle(session.item.title)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .toolbar { toolbarContent }
-        .task(id: session.id) {
-            guard !didLoad else { return }
-            didLoad = true
-            await session.load(displayScale: displayScale, settings: settings,
-                               isNewGame: session.placedCount == 0 && session.elapsed == 0)
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase != .active { session.handleBackground() }
-        }
-        .onDisappear { session.saveNow() }
-        .sheet(isPresented: $showOriginal) { OriginalImageSheet(session: session) }
     }
 
     // MARK: - Pieces
@@ -93,12 +95,12 @@ struct GameView: View {
                     } action: { boardFrame = $0 }
                 }
             }
-            .overlay(alignment: .bottomLeading) { statusBar.padding(12) }
-            .overlay(alignment: .bottomTrailing) { zoomControls.padding(12) }
+            .overlay(alignment: .bottomLeading) { statusBar.padding(isCompact ? 14 : 18) }
+            .overlay(alignment: .bottomTrailing) { zoomControls.padding(isCompact ? 14 : 18) }
     }
 
     private func tray(placement: TrayPlacement) -> some View {
-        TrayView(session: session, placement: placement) { piece, location in
+        TrayView(session: session, placement: placement, onScatter: placement == .trailing ? { session.scatterTray() } : nil) { piece, location in
             trayDrag = TrayDrag(piece: piece, location: location)
         } onEnded: { piece, location in
             trayDrag = nil
@@ -116,95 +118,145 @@ struct GameView: View {
     /// being clipped when the board is only a phone wide.
     private var statusBar: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 clockLabel
-                Divider().frame(height: 14)
+                Theme.track.frame(width: 1, height: 18)
                 progressLabel
                 solveProgress
             }
-            VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 12) {
                 clockLabel
+                Theme.track.frame(width: 1, height: 15)
                 progressLabel
             }
         }
-        .font(.callout.weight(.medium))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.primary.opacity(0.08)))
+        .font(Theme.body(17, .bold).monospacedDigit())
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Theme.card, in: Capsule())
+        .shadow(color: .black.opacity(0.16), radius: 6, y: 3)
     }
 
     private var clockLabel: some View {
-        Label(TimeFormatting.clock(session.elapsed), systemImage: "clock")
-            .monospacedDigit()
-            .accessibilityLabel(Text("Elapsed time"))
-            .accessibilityValue(Text(TimeFormatting.spoken(session.elapsed)))
+        HStack(spacing: 8) {
+            Image(systemName: "clock").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accent)
+            Text(TimeFormatting.clock(session.elapsed))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Elapsed time"))
+        .accessibilityValue(Text(TimeFormatting.spoken(session.elapsed)))
     }
 
     /// Fraction of pieces that are joined to at least one neighbour — a truer
     /// measure of progress than "taken out of the tray".
     private var solveProgress: some View {
-        ProgressView(value: session.completion)
-            .progressViewStyle(.linear)
-            .frame(width: 72)
+        ProgressBar(value: session.completion)
+            .frame(width: 110)
             .accessibilityLabel(Text("Pieces placed"))
     }
 
     private var progressLabel: some View {
-        Label("\(session.placedCount)/\(session.pieceCount)", systemImage: "puzzlepiece")
-            .monospacedDigit()
-            .accessibilityLabel(Text("Pieces placed"))
+        HStack(spacing: 8) {
+            Image(systemName: "puzzlepiece").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.sage)
+            Text("\(session.placedCount)/\(session.pieceCount)")
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Pieces placed"))
+        .accessibilityValue(Text("\(session.placedCount) of \(session.pieceCount)"))
     }
 
     private var zoomControls: some View {
         VStack(spacing: 6) {
-            Button { controller.zoomStep(1.25) } label: { Image(systemName: "plus") }
-                .accessibilityLabel(Text("Zoom in"))
-            Button { controller.zoomStep(0.8) } label: { Image(systemName: "minus") }
-                .accessibilityLabel(Text("Zoom out"))
-            Divider().frame(width: 18)
-            Button { controller.fitBoard() } label: { Image(systemName: "rectangle.center.inset.filled") }
-                .accessibilityLabel(Text("Fit board"))
-            Button { controller.fitTable() } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                .accessibilityLabel(Text("Fit table"))
+            zoomButton("plus", "Zoom in") { controller.zoomStep(1.25) }
+            zoomButton("minus", "Zoom out") { controller.zoomStep(0.8) }
+            Theme.track.frame(width: 24, height: 1).padding(.vertical, 2)
+            zoomButton("rectangle.center.inset.filled", "Fit board") { controller.fitBoard() }
+            zoomButton("arrow.up.left.and.arrow.down.right", "Fit table") { controller.fitTable() }
         }
-        .buttonStyle(.borderless)
-        .font(.system(size: 13, weight: .semibold))
-        .padding(8)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(.primary.opacity(0.08)))
+        .padding(10)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: .black.opacity(0.16), radius: 6, y: 3)
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        // The size-class branch lives inside the `ViewBuilder`, not the
-        // `ToolbarContentBuilder`: a conditional at the toolbar-content level
-        // silently produces no items on a compact width.
-        ToolbarItemGroup(placement: .primaryAction) {
-            #if os(iOS)
-            if sizeClass == .compact {
-                Menu {
-                    actionButtons
-                    Divider()
-                    undoRedoButtons
-                } label: {
-                    Label("Actions", systemImage: "ellipsis.circle")
-                }
-            } else {
-                actionButtons
-                undoRedoButtons
-            }
-            #else
-            actionButtons
-            #endif
-            pauseButton
+    private func zoomButton(_ symbol: String, _ label: LocalizedStringKey,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Theme.text)
+                .frame(width: 38, height: 38)
+                .contentShape(Circle())
         }
+        .buttonStyle(PressableStyle())
+        .accessibilityLabel(Text(label))
+    }
+
+    // MARK: - Header
+
+    /// Back, title, clock and the action chips. A phone-wide header keeps hint
+    /// and pause on the surface and folds the rest into one menu.
+    private var header: some View {
+        HStack(spacing: isCompact ? 8 : 12) {
+            RoundIconButton(symbol: "chevron.left", size: 42) { model.showLibrary() }
+                .accessibilityLabel(Text("Back to Library"))
+            Text(session.item.title)
+                .font(Theme.display(20))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 4)
+            if !isCompact {
+                HStack(spacing: 8) {
+                    Image(systemName: "clock").font(.system(size: 14, weight: .bold))
+                    Text(TimeFormatting.clock(session.elapsed))
+                }
+                .font(Theme.body(15, .bold).monospacedDigit())
+                .foregroundStyle(Theme.muted)
+                .padding(.horizontal, 14).padding(.vertical, 7)
+                .background(Theme.chip, in: Capsule())
+                .accessibilityHidden(true)
+            }
+            HStack(spacing: 6) {
+                RoundIconButton(symbol: "lightbulb", style: .sage, size: 42) { session.requestHint() }
+                    .disabled(session.phase != .playing)
+                    .accessibilityLabel(Text("Hint"))
+                if isCompact {
+                    Menu {
+                        actionButtons
+                        Divider()
+                        undoRedoButtons
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(Theme.muted)
+                            .frame(width: 42, height: 42)
+                            .background(Theme.chip, in: Circle())
+                    }
+                    .menuStyle(.button)
+                    .buttonStyle(PressableStyle())
+                    .accessibilityLabel(Text("Actions"))
+                } else {
+                    RoundIconButton(symbol: "photo", size: 42) { showOriginal = true }
+                        .accessibilityLabel(Text("Show Original"))
+                    RoundIconButton(symbol: "shuffle", size: 42) { session.scatterTray() }
+                        .disabled(session.phase != .playing || session.state.trayOrder.isEmpty)
+                        .accessibilityLabel(Text("Scatter Pieces"))
+                    RoundIconButton(symbol: "arrow.uturn.backward", size: 42) { session.undo() }
+                        .disabled(!session.canUndo)
+                        .accessibilityLabel(Text("Undo"))
+                    RoundIconButton(symbol: "arrow.uturn.forward", size: 42) { session.redo() }
+                        .disabled(!session.canRedo)
+                        .accessibilityLabel(Text("Redo"))
+                }
+                pauseButton
+            }
+        }
+        .padding(.horizontal, isCompact ? 12 : 22)
+        .frame(height: isCompact ? 56 : 70)
+        .background(Theme.card)
     }
 
     @ViewBuilder
     private var actionButtons: some View {
-        Button { session.requestHint() } label: { Label("Hint", systemImage: "lightbulb") }
-            .disabled(session.phase != .playing)
         Button { showOriginal = true } label: { Label("Show Original", systemImage: "photo") }
         Button { session.scatterTray() } label: { Label("Scatter Pieces", systemImage: "shuffle") }
             .disabled(session.phase != .playing || session.state.trayOrder.isEmpty)
@@ -219,13 +271,26 @@ struct GameView: View {
     }
 
     private var pauseButton: some View {
-        Button {
-            session.phase == .paused ? session.resume() : session.pause()
+        let paused = session.phase == .paused
+        return Button {
+            paused ? session.resume() : session.pause()
         } label: {
-            Label(session.phase == .paused ? "Resume" : "Pause",
-                  systemImage: session.phase == .paused ? "play.fill" : "pause.fill")
+            HStack(spacing: 7) {
+                Image(systemName: paused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 14, weight: .bold))
+                if !isCompact { Text(paused ? "Resume" : "Pause").lineLimit(1) }
+            }
+            .fixedSize()
+            .font(Theme.body(15, .bold))
+            .foregroundStyle(Theme.onAccent)
+            .frame(minWidth: 42, minHeight: 42)
+            .padding(.horizontal, isCompact ? 0 : 16)
+            .background(Theme.accent, in: Capsule())
+            .contentShape(Capsule())
         }
+        .buttonStyle(PressableStyle())
         .disabled(session.phase == .completed)
+        .accessibilityLabel(Text(paused ? "Resume" : "Pause"))
     }
 
     // MARK: - Overlays
@@ -258,9 +323,9 @@ struct GameView: View {
 
     private func trayThickness(for size: CGSize) -> CGFloat {
         #if os(macOS)
-        clamp(size.width * 0.19, 190, 320)
+        clamp(size.width * 0.22, 240, 320)
         #else
-        size.width > size.height ? clamp(size.width * 0.2, 170, 300) : clamp(size.height * 0.2, 130, 220)
+        size.width > size.height ? clamp(size.width * 0.24, 220, 300) : clamp(size.height * 0.2, 130, 220)
         #endif
     }
 
@@ -279,6 +344,12 @@ enum TimeFormatting {
     static func clock(_ interval: TimeInterval) -> String {
         let total = Int(max(0, interval))
         return String(format: "%02d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
+    }
+
+    /// `m:ss`, for differences that are never hours long.
+    static func short(_ interval: TimeInterval) -> String {
+        let total = Int(max(0, interval))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     static func spoken(_ interval: TimeInterval) -> String {
