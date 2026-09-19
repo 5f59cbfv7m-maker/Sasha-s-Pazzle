@@ -12,7 +12,7 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **63 tests in 8 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **64 tests in 8 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
@@ -130,6 +130,25 @@ pan wait for it. Verify both directions with `touch_path` on the simulator;
 the tray *looks* unscrolled after a flick because rows repeat every 84pt, so
 read `onScrollGeometryChange` rather than trusting a screenshot.
 
+**Resources are flattened.** `Sources/` is a synchronized folder, so anything
+under `Sources/Resources/` lands in the bundle root — `Pictures/sea_X.jpg`
+becomes `sea_X.jpg`, which is why `LibraryCatalog.bundled()` and
+`Feedback.soundURL` look up with `subdirectory: nil`. Consequences: no two
+resources may share a name, and a `.gitkeep`/README inside those folders is
+copied too (two of them collide with "multiple commands produce"). The
+`Pictures/` and `Sounds/` folders therefore do not exist in git; the user
+creates them when they have files. See `docs/app-store.md` §5–6.
+
+**Bundled picture titles are manual catalog keys.** `bundledItem(at:)` calls
+`String(localized:)` with the file name's title at runtime, so Xcode's string
+extraction never sees them — add them to `Localizable.xcstrings` by hand.
+
+**Ten languages, hand-translated.** `Localizable.xcstrings` carries en, ru,
+de, fr, es, it, pt-BR, ja, ko, zh-Hans; `knownRegions` in the pbxproj lists
+the same set. CJK breaks lines between any two characters, so `PillButton`
+pins its label to one line. The bundled fonts have no CJK either; the same
+cascade that rescues Cyrillic falls through to the system fonts.
+
 ## Building against the 27 SDKs
 
 Checked against Apple's release notes for Xcode 27 (Swift 6.4), iOS/iPadOS 27 and
@@ -175,6 +194,8 @@ There is no way to read back a live SwiftUI window — `cacheDisplay` and
   `completed`, `huge`, `hugeSolved`. `--tray-trailing` forces the landscape
   layout on a portrait simulator (there is no `simctl` rotate); add
   `-AppleLanguages "(en)" -onboarding YES -appearance light` to pin the rest.
+- **Store screenshots**: `Scripts/store-screenshots.sh [lang]` walks the stages
+  on the iPhone 17 Pro Max and iPad Pro 13" simulators into `docs/store/`.
 - **Screenshots**: on macOS capture the window only (find its number via
   `CGWindowListCopyWindowInfo`, then `screencapture -o -l <id>`) — a full-screen
   grab exposes the user's desktop. On iOS use `xcrun simctl io <device> screenshot`.

@@ -8,6 +8,8 @@ nonisolated enum ImageSource: Sendable, Hashable, Codable {
     case generated(family: ArtFamily, seed: UInt64)
     /// A photo the user imported; `fileName` lives in the app's library folder.
     case imported(fileName: String)
+    /// A photograph shipped in the bundle from `Resources/Pictures/`.
+    case bundled(fileName: String)
 
     var isUserPhoto: Bool { if case .imported = self { true } else { false } }
 }

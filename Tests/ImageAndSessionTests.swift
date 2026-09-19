@@ -47,6 +47,25 @@ struct ImageTests {
         #expect(abs(decoded.aspect - 1.6) < 0.05)
     }
 
+    @Test("A bundled picture takes its category and title from the file name")
+    func bundledPictureName() throws {
+        let directory = URL.temporaryDirectory.appending(path: "JigsawBundled-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let good = directory.appending(path: "sea_Sunset Beach.jpg")
+        try ImagePipeline.write(makeImage(width: 900, height: 600), to: good)
+
+        let item = try #require(LibraryCatalog.bundledItem(at: good))
+        #expect(item.category == .sea)
+        #expect(item.title == String(localized: "Sunset Beach"), "title goes through the string catalog")
+        #expect(item.source == .bundled(fileName: "sea_Sunset Beach.jpg"))
+        #expect(abs(item.aspect - 1.5) < 0.001)
+
+        let unknownCategory = directory.appending(path: "food_Pasta.jpg")
+        try ImagePipeline.write(makeImage(width: 90, height: 60), to: unknownCategory)
+        #expect(LibraryCatalog.bundledItem(at: unknownCategory) == nil)
+        #expect(LibraryCatalog.bundledItem(at: directory.appending(path: "sea_Missing.jpg")) == nil)
+    }
+
     @Test("An unreadable file reports an error instead of crashing")
     func decodeFailsGracefully() {
         #expect(throws: (any Error).self) {

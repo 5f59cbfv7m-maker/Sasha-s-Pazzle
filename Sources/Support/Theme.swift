@@ -226,7 +226,8 @@ struct PillButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if let symbol { Image(systemName: symbol).font(.system(size: size * 0.9, weight: .bold)) }
-                Text(title)
+                // CJK breaks between any two characters; a pill never wraps.
+                Text(title).lineLimit(1).fixedSize()
             }
             .font(style == .primary || style == .sage ? Theme.display(size) : Theme.body(size - 2, .bold))
             .foregroundStyle(foreground)

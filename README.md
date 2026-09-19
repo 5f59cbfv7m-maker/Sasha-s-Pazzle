@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/platforms-macOS%2015%20%7C%20iOS%2018%20%7C%20iPadOS%2018-1B7FD1" alt="Platforms">
   <img src="https://img.shields.io/badge/Swift-6.0-F05138" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-16%2B-147EFB" alt="Xcode 16+">
-  <img src="https://img.shields.io/badge/tests-63%20passing-3FB950" alt="63 tests passing">
+  <img src="https://img.shields.io/badge/tests-64%20passing-3FB950" alt="64 tests passing">
   <img src="https://img.shields.io/badge/dependencies-none-8B949E" alt="No dependencies">
   <img src="https://img.shields.io/badge/offline-100%25-8B949E" alt="Works offline">
 </p>
@@ -80,9 +80,9 @@ The look follows the *Organic* design system: cream and sand surfaces
 (`#f5ead8` / `#ebddc5`), a terracotta accent (`#c67139`) for the primary action,
 sage (`#7a8a5e`) for everything that says "done", pill-shaped controls and
 over-rounded cards. Headings are set in **Caprasimo**, body text in **Figtree**
-(both bundled, SIL Open Font License). Neither font has Cyrillic glyphs, so the
-Russian localisation falls back to SF Rounded and SF through a CoreText cascade
-list rather than to a different weight. Every colour is a dynamic token in
+(both bundled, SIL Open Font License). Neither font has Cyrillic or CJK glyphs,
+so those localisations fall back to SF Rounded and SF through a CoreText
+cascade list rather than to a different weight. Every colour is a dynamic token in
 `Theme.swift`, so light and dark are one set of views.
 
 ---
@@ -329,7 +329,7 @@ Sources/
 ├── Persistence/  GameSnapshot, SaveStore, PlayerStats (achievements, streaks)
 ├── Support/      Theme (tokens, fonts, controls), SplitMix64, Feedback, debug driver
 └── Resources/    Assets.xcassets, Localizable.xcstrings, Fonts/
-Tests/            63 tests across 8 suites
+Tests/            64 tests across 8 suites
 ```
 
 The engine layer (`Engine/`, `Art/`) is `nonisolated` and `Sendable` and knows
@@ -382,15 +382,22 @@ resizing are handled by the same code path as rotation.
 - Completion screen with confetti, the delta to your previous record and any
   achievement just unlocked
 - Three-step onboarding on first launch
-- Settings: theme, sound, haptics, picture guide, piece outlines, snap assist,
-  defaults, reset saves and statistics
-- Procedurally synthesised sound and haptics for snap, merge and completion
+- Settings: theme, sounds, background music, haptics, picture guide, piece
+  outlines, snap assist, defaults, reset saves and statistics
+- Sound and haptics for snap, merge and completion — synthesised by default,
+  replaced by any `snap`/`merge`/`complete` audio file dropped into
+  `Sources/Resources/Sounds/`; a `music.*` there loops while the board is open
+- Photographs dropped into `Sources/Resources/Pictures/` as
+  `<category>_<Title>.jpg` join the library alongside the generated art
 - Full keyboard-shortcut menu bar on macOS
-- English and Russian, Dynamic Type, VoiceOver labels, light and dark
+- Ten languages (English, Russian, German, French, Spanish, Italian,
+  Brazilian Portuguese, Japanese, Korean, Simplified Chinese), Dynamic Type,
+  VoiceOver labels, light and dark
+- `docs/app-store.md` — release checklist, store copy, screenshot script
 
 ## Tests
 
-`Tests/` contains **63 tests in 8 suites** (Swift Testing), covering the areas the
+`Tests/` contains **64 tests in 8 suites** (Swift Testing), covering the areas the
 engine cannot be allowed to get wrong:
 
 grid selection · edge generation · edge matching between neighbours · flat
@@ -437,8 +444,9 @@ landscape layout on a portrait simulator.
 - Verified on macOS and in the iPhone/iPad simulators. **No physical iPhone or
   iPad was available**, so on-device behaviour — including Apple Pencil — is
   untested on real hardware.
-- Sound is synthesised additively at launch; if the audio engine fails to start
-  the app runs silently rather than reporting an error.
+- Sound is synthesised additively at launch unless audio files are bundled; if
+  the audio engine fails to start the app runs silently rather than reporting
+  an error.
 
 ## Licence
 

@@ -153,6 +153,14 @@
 			knownRegions = (
 				en,
 				ru,
+				de,
+				fr,
+				es,
+				it,
+				"pt-BR",
+				ja,
+				ko,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = AA00000000000000000000B1;
@@ -303,8 +311,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sasha's Puzzles";
 				INFOPLIST_KEY_CFBundleName = "Sasha's Puzzles";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Sample project. No warranty.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Kirill Rychkov";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sasha's Puzzles needs access to your photo library so you can turn your own photos into puzzles.";
 				"INFOPLIST_KEY_NSPrincipalClass[sdk=macosx*]" = NSApplication;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphone*]" = YES;
@@ -349,8 +358,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sasha's Puzzles";
 				INFOPLIST_KEY_CFBundleName = "Sasha's Puzzles";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.puzzle-games";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Sample project. No warranty.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Kirill Rychkov";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sasha's Puzzles needs access to your photo library so you can turn your own photos into puzzles.";
 				"INFOPLIST_KEY_NSPrincipalClass[sdk=macosx*]" = NSApplication;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphone*]" = YES;

@@ -92,10 +92,9 @@ actor ImageStore {
             produced = ArtRenderer.render(family: family, variant: variant, size: size)
                 .map(RenderedImage.init(cgImage:))
         case let .imported(fileName):
-            guard let url = PhotoLibraryStore.photoURL(fileName: fileName),
-                  let decoded = try? ImagePipeline.decode(url: url, maxPixelSize: request.longSide)
-            else { return nil }
-            produced = ImagePipeline.crop(decoded, toAspect: request.aspect.ratio)
+            produced = decode(PhotoLibraryStore.photoURL(fileName: fileName), for: request)
+        case let .bundled(fileName):
+            produced = decode(Bundle.main.url(forResource: fileName, withExtension: nil), for: request)
         }
 
         if let produced, request.longSide >= 700 {
@@ -103,6 +102,12 @@ actor ImageStore {
             try? ImagePipeline.write(produced, to: cacheURL, quality: 0.9)
         }
         return produced
+    }
+
+    private nonisolated static func decode(_ url: URL?, for request: Request) -> RenderedImage? {
+        guard let url, let decoded = try? ImagePipeline.decode(url: url, maxPixelSize: request.longSide)
+        else { return nil }
+        return ImagePipeline.crop(decoded, toAspect: request.aspect.ratio)
     }
 
     private nonisolated static func canvasSize(longSide: Int, aspect: CGFloat) -> CGSize {

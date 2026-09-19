@@ -112,10 +112,10 @@ struct PersistenceTests {
         #expect(!restored[0].isUserPhoto)
     }
 
-    @Test("The built-in catalogue is the curated 24 and every picture is unique")
+    @Test("The built-in catalogue is the bundled photos plus the curated selection, every picture unique")
     func catalogueIsCuratedAndUnique() {
         let items = LibraryCatalog.builtIn()
-        #expect(items.count == 24)
+        #expect(items.count == LibraryCatalog.bundled().count + LibraryCatalog.selection.count)
         #expect(items.count == LibraryCatalog.count)
         #expect(Set(items.map(\.id)).count == items.count)
         for (family, variant) in LibraryCatalog.selection {

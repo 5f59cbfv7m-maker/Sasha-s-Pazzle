@@ -27,6 +27,7 @@ final class AppSettings {
 
     var appearance: Appearance { didSet { write(appearance.rawValue, "appearance") } }
     var soundEnabled: Bool { didSet { write(soundEnabled, "sound") } }
+    var musicEnabled: Bool { didSet { write(musicEnabled, "music") } }
     var hapticsEnabled: Bool { didSet { write(hapticsEnabled, "haptics") } }
     /// Faint copy of the picture under the board — a guide, not a solution.
     var showGhostImage: Bool { didSet { write(showGhostImage, "ghost") } }
@@ -43,6 +44,7 @@ final class AppSettings {
         self.defaults = defaults
         appearance = Appearance(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         soundEnabled = defaults.object(forKey: "sound") as? Bool ?? true
+        musicEnabled = defaults.object(forKey: "music") as? Bool ?? true
         hapticsEnabled = defaults.object(forKey: "haptics") as? Bool ?? true
         showGhostImage = defaults.object(forKey: "ghost") as? Bool ?? true
         snapAssist = SnapAssist(rawValue: defaults.string(forKey: "snapAssist") ?? "") ?? .standard

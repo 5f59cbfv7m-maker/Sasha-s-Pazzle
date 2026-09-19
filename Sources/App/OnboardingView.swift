@@ -12,7 +12,7 @@ struct OnboardingView: View {
         ("Just the help you need",
          "A piece pulls itself into place. The hint highlights the next step — it can be switched off in Settings."),
         ("Your photos are puzzles too",
-         "24 pictures in the library plus any photo from your gallery: from 12 pieces to 800, framed the way you like."),
+         "\(LibraryCatalog.count) pictures in the library plus any photo from your gallery: from 12 pieces to 800, framed the way you like."),
     ]
 
     var body: some View {

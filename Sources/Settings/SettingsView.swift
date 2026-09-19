@@ -28,7 +28,10 @@ struct SettingsView: View {
                         toggle("Outline pieces", $settings.showPieceOutlines)
                     }
                     group("Feedback") {
-                        toggle("Snap sound", $settings.soundEnabled)
+                        toggle("Sounds", $settings.soundEnabled)
+                        if Feedback.hasMusic {
+                            toggle("Background music", $settings.musicEnabled)
+                        }
                         #if os(iOS)
                         toggle("Haptic feedback", $settings.hapticsEnabled)
                         #endif
