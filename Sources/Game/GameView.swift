@@ -14,13 +14,17 @@ struct GameView: View {
     @Environment(\.isCompact) private var isCompact
 
     private var controller: BoardInputController { model.boardController }
-    @State private var trayDrag: TrayDrag?
+    @State private var trayDrag = TrayDragState()
     @State private var showOriginal = false
     @State private var didLoad = false
 
-    struct TrayDrag: Equatable {
-        var piece: Int32
-        var location: CGPoint
+    /// The piece on its way out of the tray. Its own observable so each move
+    /// re-renders the ghost alone rather than the whole screen — an 800-cell
+    /// tray grid re-diffed per touch sample is what made drags stutter.
+    @Observable @MainActor
+    final class TrayDragState {
+        var piece: Int32?
+        var location: CGPoint = .zero
     }
 
     var body: some View {
@@ -73,17 +77,7 @@ struct GameView: View {
                 }
 
                 overlays
-
-                if let trayDrag, let image = session.textures.images[safe: Int(trayDrag.piece)] ?? nil {
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: draggedPieceSize, height: draggedPieceSize)
-                        .shadow(color: .black.opacity(0.4), radius: 10, y: 6)
-                        .position(trayDrag.location)
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
-                }
+                TrayGhost(session: session, drag: trayDrag)
             }
             .coordinateSpace(.named("game"))
         }
@@ -105,10 +99,12 @@ struct GameView: View {
         let boardFrame = CGRect(origin: .zero, size: placement == .trailing
                                 ? CGSize(width: size.width - thickness, height: size.height)
                                 : CGSize(width: size.width, height: size.height - thickness))
+        let drag = trayDrag
         return TrayView(session: session, placement: placement, onScatter: placement == .trailing ? { session.scatterTray() } : nil) { piece, location in
-            trayDrag = TrayDrag(piece: piece, location: location)
+            drag.piece = piece
+            drag.location = location
         } onEnded: { piece, location in
-            trayDrag = nil
+            drag.piece = nil
             guard boardFrame.contains(location) else { return }
             let boardPoint = session.viewport.board(location)
             let outcome = session.placePieceFromTray(piece, at: boardPoint,
@@ -338,8 +334,23 @@ struct GameView: View {
         #endif
     }
 
-    private var draggedPieceSize: CGFloat {
-        max(44, session.geometry.cellSize.minimumSide * session.viewport.scale * 1.6)
+}
+
+private struct TrayGhost: View {
+    let session: GameSession
+    let drag: GameView.TrayDragState
+
+    var body: some View {
+        if let piece = drag.piece, let image = session.textures.images[safe: Int(piece)] ?? nil {
+            let size = max(44, session.geometry.cellSize.minimumSide * session.viewport.scale * 1.6)
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .shadow(color: .black.opacity(0.4), radius: 10, y: 6)
+                .position(drag.location)
+                .allowsHitTesting(false)
+        }
     }
 }
 

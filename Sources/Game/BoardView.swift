@@ -149,7 +149,9 @@ struct BoardView: View {
     }
 
     private var boardCanvas: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !session.needsAnimationTicks)) { timeline in
+        // Runs at the display's own rate: 120 Hz on ProMotion (the phone also
+        // needs CADisableMinimumFrameDurationOnPhone in the Info.plist).
+        TimelineView(.animation(minimumInterval: 1.0 / 120.0, paused: !session.needsAnimationTicks)) { timeline in
             Canvas(opaque: false, rendersAsynchronously: false) { context, size in
                 draw(in: &context, size: size, now: timeline.date)
             }

@@ -139,6 +139,29 @@ struct ImageTests {
         }
     }
 
+    @Test("A zoom re-cut keeps the board drawn and skips zooming out")
+    @MainActor
+    func textureRecutIsSilent() async throws {
+        let geometry = PuzzleGeometry(columns: 4, rows: 3, aspect: 1.5, seed: 7)
+        let source = RenderedImage(cgImage: ArtRenderer.render(family: .mosaic, variant: 1,
+                                                               size: CGSize(width: 600, height: 400))!)
+        let store = PieceTextureStore()
+        store.rebuild(geometry: geometry, source: source, pixelScale: 1, outlines: false)
+        #expect(!store.isReady)
+        while !store.isReady { try await Task.sleep(for: .milliseconds(20)) }
+        let first = try #require(store.texture(for: 0))
+
+        // Zooming out reuses the sharper textures instead of re-cutting.
+        store.rebuild(geometry: geometry, source: source, pixelScale: 0.6, outlines: false)
+        #expect(store.isReady && store.pixelScale == 1)
+
+        // Zooming in re-cuts without ever blanking the board.
+        store.rebuild(geometry: geometry, source: source, pixelScale: 2, outlines: false)
+        #expect(store.isReady && store.progress == 1 && store.texture(for: 0) === first)
+        while store.pixelScale != 2 { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(store.texture(for: 0)!.width > first.width)
+    }
+
     @Test("The texture budget lowers the scale instead of exhausting memory")
     func textureBudgetIsRespected() {
         let small = PuzzleGeometry(columns: 4, rows: 3, aspect: 1.5, seed: 1)

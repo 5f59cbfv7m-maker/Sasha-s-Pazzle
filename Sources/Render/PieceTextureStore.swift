@@ -37,6 +37,7 @@ final class PieceTextureStore {
     /// Outline bounds of each piece relative to its own cell origin, in board units.
     private(set) var localBounds: [CGRect] = []
     private(set) var pixelScale: CGFloat = 1
+    private var outlines = false
     private(set) var progress: Double = 0
     private(set) var isReady = false
 
@@ -76,24 +77,33 @@ final class PieceTextureStore {
     func rebuild(geometry: PuzzleGeometry, source: RenderedImage,
                  pixelScale desired: CGFloat, outlines: Bool) {
         let scale = Self.affordableScale(for: geometry, desired: desired)
-        // Re-rendering for a change smaller than 25% is not worth the work.
-        if isReady, abs(scale - pixelScale) / max(pixelScale, 0.001) < 0.25,
-           textures.count == geometry.pieceCount { return }
+        let count = geometry.pieceCount
+        // Zooming out draws the existing, sharper textures downsampled; only a
+        // markedly larger scale (or one wasteful enough to slow every frame)
+        // is worth re-cutting. Small changes are not worth the work either.
+        if isReady, textures.count == count, outlines == self.outlines,
+           scale < pixelScale * 1.25, scale > pixelScale * 0.5 { return }
 
         task?.cancel()
-        let count = geometry.pieceCount
-        if textures.count != count {
+        // A re-cut of a live board must not blank it: the old textures keep
+        // drawing (they are scale independent) until the new set lands in one
+        // swap, so there is one redraw and no loading overlay.
+        let silent = isReady && textures.count == count
+        if !silent {
             textures = Array(repeating: nil, count: count)
             images = Array(repeating: nil, count: count)
+            progress = 0
+            isReady = false
         }
         localBounds = (0..<count).map { geometry.localBounds(of: $0) }
-        pixelScale = scale
-        progress = 0
-        isReady = false
+        // Recorded when the cut lands, so a cancelled re-cut keeps describing
+        // the textures actually on screen.
+        if !silent { pixelScale = scale; self.outlines = outlines }
 
         task = Task { [geometry, source] in
             let chunkSize = max(16, count / 24)
             var index = 0
+            var staged: [CGImage?] = silent ? Array(repeating: nil, count: count) : []
             while index < count {
                 if Task.isCancelled { return }
                 let range = Array(index..<min(index + chunkSize, count))
@@ -102,12 +112,22 @@ final class PieceTextureStore {
                                                   pixelScale: scale, outlines: outlines))
                 }.value
                 if Task.isCancelled { return }
-                for (piece, image) in rendered.value where piece < self.textures.count {
-                    self.textures[piece] = image
-                    self.images[piece] = Image(decorative: image, scale: 1)
+                for (piece, image) in rendered.value where piece < count {
+                    if silent {
+                        staged[piece] = image
+                    } else {
+                        self.textures[piece] = image
+                        self.images[piece] = Image(decorative: image, scale: 1)
+                    }
                 }
                 index += range.count
-                self.progress = Double(index) / Double(count)
+                if !silent { self.progress = Double(index) / Double(count) }
+            }
+            if silent {
+                self.textures = staged
+                self.images = staged.map { $0.map { Image(decorative: $0, scale: 1) } }
+                self.pixelScale = scale
+                self.outlines = outlines
             }
             self.isReady = true
         }

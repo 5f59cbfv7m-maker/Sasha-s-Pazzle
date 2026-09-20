@@ -12,7 +12,7 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **64 tests in 8 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **65 tests in 8 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
@@ -129,6 +129,15 @@ the piece, otherwise it fails and the tray scrolls) and makes the scroll view's
 pan wait for it. Verify both directions with `touch_path` on the simulator;
 the tray *looks* unscrolled after a flick because rows repeat every 84pt, so
 read `onScrollGeometryChange` rather than trusting a screenshot.
+
+**Per-sample state must not live on the screen's view.** The tray ghost's
+position used to be a `@State` on `GameView`; every touch sample re-evaluated
+the whole screen, including the 800-cell tray grid, which is what made tray
+drags on the iPad stutter. `TrayDragState` is its own `@Observable`, read only
+by `TrayGhost`. Same idea for texture re-cuts: `PieceTextureStore.rebuild`
+on a live board stages the new textures and swaps them in once, and skips
+zoom-out entirely (the old, sharper textures downsample fine) — resetting
+`progress` there put the full-screen `LoadingOverlay` over every zoom.
 
 **Measured frames go stale across a rotation.** `onGeometryChange` reading
 `frame(in: .named("game"))` fires once with the final landscape frame and then
