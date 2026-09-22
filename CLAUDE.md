@@ -27,7 +27,7 @@ mismatch — it is deliberate.
 | Path | Role |
 |---|---|
 | `Sources/Engine/` | `EdgeProfile`, `PuzzleGeometry`, `PuzzleState` — pure, `Sendable`, no SwiftUI |
-| `Sources/Art/` | Procedural picture generators; `LibraryCatalog.selection` picks the 24 that ship |
+| `Sources/Art/` | Procedural picture generators, kept for saved games; `LibraryCatalog.selection` is empty — the library is the photos in `Resources/Pictures/` |
 | `Sources/Render/` | `PieceTextureStore` — parallel bitmap cutting with the bevel |
 | `Sources/Interaction/` | `Viewport`, `BoardEventView` (AppKit/UIKit input bridge) |
 | `Sources/Game/` | `GameSession` plus the playing screen |
@@ -155,8 +155,8 @@ becomes `sea_X.jpg`, which is why `LibraryCatalog.bundled()` and
 `Feedback.soundURL` look up with `subdirectory: nil`. Consequences: no two
 resources may share a name, and a `.gitkeep`/README inside those folders is
 copied too (two of them collide with "multiple commands produce"). The
-`Pictures/` folder therefore does not exist in git; the user creates it
-when they have files. `Sounds/` holds the effects made by
+`Pictures/` folder holds the 120 bundled photographs (credits in
+`docs/photo-credits.md`). `Sounds/` holds the effects made by
 `Scripts/make-sounds.swift` — CAF, not AAC, because AAC's encoder priming
 puts ~50 ms of silence in front of every tap. See `docs/app-store.md` §5–6.
 

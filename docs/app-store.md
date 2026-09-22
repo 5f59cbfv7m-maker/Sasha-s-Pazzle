@@ -126,10 +126,11 @@ Xcode нет; переводы сделаны вручную.
 
 ## 5. Замена картинок
 
-Сейчас 24 картинки рисуются процедурно (`Sources/Art/`). Реальные
-фотографии кладутся рядом, ничего в коде для этого менять не нужно:
+Сейчас в библиотеке 120 фотографий с Unsplash в `Sources/Resources/Pictures/`
+(авторы — в `docs/photo-credits.md`). Процедурные картинки из `Sources/Art/`
+отключены: `LibraryCatalog.selection` пуст. Добавить или заменить фото:
 
-1. Создайте папку `Sources/Resources/Pictures/` (Xcode подхватит её сам —
+1. Папка `Sources/Resources/Pictures/` (Xcode подхватывает её сам —
    папка `Sources` синхронизируется с диском).
 2. Положите файлы с именем `<категория>_<Название>.jpg`, например
    `sea_Sunset Beach.jpg`, `animals_Red Panda.heic`. Категории: `space`,

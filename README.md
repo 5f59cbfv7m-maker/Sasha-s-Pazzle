@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <b>24 built-in pictures · 12 – 1000 pieces · no web view, no backend, no network access of any kind</b>
+  <b>120 built-in photographs · 12 – 1000 pieces · no web view, no backend, no network access of any kind</b>
 </p>
 
 The Xcode target, scheme and Swift module stay `JigsawPuzzle`; only the name the
@@ -47,7 +47,7 @@ app shows on screen is *Sasha's Puzzles*.
 </tr>
 <tr>
 <td align="center"><em>Nightmare mode — 805 pieces, cut in a tenth of a second</em></td>
-<td align="center"><em>The library: today's puzzle and its streak, 24 curated
+<td align="center"><em>The library: today's puzzle and its streak, 120 built-in
 pictures plus your own photos, best times on solved cards</em></td>
 </tr>
 </table>
@@ -271,12 +271,16 @@ Measured on an Apple Silicon Mac. What makes it work:
 
 ## The picture library
 
-Shipping several hundred photographs is neither practical nor licensable for an
-offline app, so the built-in library is **generated on the device**. Each of the
-29 generator families can paint 20 seeded variants; `LibraryCatalog.selection`
-names the **24 hand-picked pictures** that ship, one per family, covering space,
-mountains, nature, sea, city, animals and abstract work. A saved game stores the
-family and seed, so a picture that leaves the catalogue still loads.
+The built-in library is **120 photographs from Unsplash** (Unsplash License,
+credits in [`docs/photo-credits.md`](docs/photo-credits.md)), 2560 px on the
+long side, across space, mountains, nature, sea, city, animals and abstract.
+They live in `Sources/Resources/Pictures/` as `<category>_<Title>.jpg`; the
+title is a string-catalog key translated into all ten languages.
+
+The procedural generators that drew the earlier library are still in
+`Sources/Art/`: each of the 29 families paints seeded variants, and a saved game
+stores the family and seed, so a generated puzzle in progress still loads.
+`LibraryCatalog.selection` can bring any of them back.
 
 Every artwork ends with a mandatory detail pass — structured, multi-scale texture
 rather than smooth gradients — because an 800-piece puzzle is only solvable if
@@ -366,7 +370,7 @@ resizing are handled by the same code path as rotation.
 
 ## Features
 
-- 24 built-in pictures + your own photos (Photos and Files import)
+- 120 built-in photographs + your own photos (Photos and Files import)
 - Difficulty from 12 to 800 pieces, plus a custom slider up to 1000
 - Framing: original, 1:1, 3:2, 4:3, 16:9, 2:3 — centre-cropped, never stretched
 - True jigsaw geometry with tabs, sockets and flat borders
@@ -388,7 +392,7 @@ resizing are handled by the same code path as rotation.
   replaced by any `snap`/`merge`/`complete` audio file dropped into
   `Sources/Resources/Sounds/`; a `music.*` there loops while the board is open
 - Photographs dropped into `Sources/Resources/Pictures/` as
-  `<category>_<Title>.jpg` join the library alongside the generated art
+  `<category>_<Title>.jpg` join the library, no code changes
 - Full keyboard-shortcut menu bar on macOS
 - Ten languages (English, Russian, German, French, Spanish, Italian,
   Brazilian Portuguese, Japanese, Korean, Simplified Chinese), Dynamic Type,
@@ -433,9 +437,6 @@ landscape layout on a portrait simulator.
 
 ## Known limitations
 
-- Built-in pictures are **generated artwork, not photographs**. Bundling real
-  photos is not possible for an offline, dependency-free, licence-clean app;
-  import your own for photographic puzzles.
 - Pieces cannot be rotated. Every difficulty assumes the classic
   upright-pieces rule.
 - Above roughly 1000 pieces the tray becomes an impractical way to play; use

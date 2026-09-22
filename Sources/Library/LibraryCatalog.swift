@@ -3,26 +3,11 @@ import Foundation
 /// Builds the built-in picture library.
 nonisolated enum LibraryCatalog {
 
-    /// The curated built-in set: one hand-picked seeded variant per family.
-    /// The variant numbers are the seeds that looked best at full size — change
-    /// them only after looking at the result, not by taste of the number.
-    static let selection: [(family: ArtFamily, variant: Int)] = [
-        // Space
-        (.galaxy, 0), (.aurora, 3),
-        // Mountains
-        (.alpineRidge, 6), (.canyon, 3), (.dunes, 8), (.iceField, 6),
-        // Nature
-        (.forest, 1), (.autumnWoods, 6),
-        // Sea
-        (.sunsetBeach, 8), (.coralReef, 13), (.koiPond, 0),
-        // City
-        (.cityNight, 6), (.cityDusk, 2), (.harbourLights, 3),
-        // Animals
-        (.butterflies, 18), (.flamingos, 12), (.jellyfish, 12),
-        // Abstract
-        (.stainedGlass, 1), (.mosaic, 3), (.lowPoly, 18), (.juliaSet, 3),
-        (.marble, 3), (.silkFlow, 7), (.crystalCave, 8),
-    ]
+    /// Generated pictures shipped alongside the photographs. Empty since the
+    /// library switched to real photos (`Resources/Pictures/`); the generators
+    /// stay so saved games of generated pictures still load, and a family can
+    /// come back as `(.galaxy, 0)` — the variant is its seed.
+    static let selection: [(family: ArtFamily, variant: Int)] = []
 
     static var count: Int { items.count }
 

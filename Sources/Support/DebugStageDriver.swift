@@ -23,7 +23,7 @@ enum DebugStageDriver {
         if CommandLine.arguments.contains("--clear-saves") { model.deleteAllSaves() }
         await settle(0.6)
 
-        guard let picture = model.library.builtIn.first(where: { $0.id == "gen.4.6" })
+        guard let picture = model.library.builtIn.first(where: { $0.id == "bundled.city_Riomaggiore Harbour" })
                 ?? model.library.builtIn.first else { return }
 
         switch stage {
