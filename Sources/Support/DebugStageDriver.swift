@@ -60,6 +60,7 @@ enum DebugStageDriver {
                 await settle(0.3)
                 break
             }
+            model.session?.debugAddPlayTime(14 * 60 + 37)
             model.session?.solveImmediately()
             await settle(1.2)
 

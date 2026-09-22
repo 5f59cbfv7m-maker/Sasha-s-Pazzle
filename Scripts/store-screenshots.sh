@@ -14,6 +14,8 @@ LANGUAGE=${1:-en}
 OUT="docs/store/$LANGUAGE"
 DD="${TMPDIR:-/tmp}/sashas-puzzles-screenshots"
 BUNDLE=com.kirillrychkov.SashasPazzle
+typeset -A LOCALES=(en en_US ru ru_RU de de_DE fr fr_FR es es_ES it it_IT pt-BR pt_BR ja ja_JP ko ko_KR zh-Hans zh_CN)
+LOCALE=${LOCALES[$LANGUAGE]:-en_US}
 STAGES=(library board scattered hint completed dark settings)
 
 # Cutting a big puzzle on a freshly booted simulator can outlast any fixed
@@ -34,8 +36,19 @@ settle() {
 for DEVICE in "iPhone 17 Pro Max" "iPad Pro 13-inch (M5)"; do
   UDID=$(xcrun simctl list devices available | grep -F "$DEVICE (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
   [[ -n "$UDID" ]] || { echo "No simulator named '$DEVICE' — add it in Xcode › Settings › Components"; exit 1; }
+  # The iPad status bar shows the date in the simulator's own language, so the
+  # simulator is switched to the screenshot language (and restored at the end).
+  PREVIOUS_LANGUAGES=$(xcrun simctl spawn "$UDID" defaults read -g AppleLanguages 2>/dev/null | tr -d ' \n()"' || true)
+  PREVIOUS_LOCALE=$(xcrun simctl spawn "$UDID" defaults read -g AppleLocale 2>/dev/null || true)
   xcrun simctl boot "$UDID" 2>/dev/null || true
   xcrun simctl bootstatus "$UDID" -b >/dev/null
+  if [[ "$(xcrun simctl spawn "$UDID" defaults read -g AppleLocale 2>/dev/null)" != "$LOCALE" ]]; then
+    xcrun simctl spawn "$UDID" defaults write -g AppleLanguages -array "$LANGUAGE"
+    xcrun simctl spawn "$UDID" defaults write -g AppleLocale "$LOCALE"
+    xcrun simctl shutdown "$UDID"
+    xcrun simctl boot "$UDID"
+    xcrun simctl bootstatus "$UDID" -b >/dev/null
+  fi
   xcodebuild -quiet -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle -configuration Debug \
     -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$DD" build
   xcrun simctl install "$UDID" "$DD/Build/Products/Debug-iphonesimulator/Sasha's Puzzles.app"
@@ -54,4 +67,9 @@ for DEVICE in "iPhone 17 Pro Max" "iPad Pro 13-inch (M5)"; do
     echo "$DIR/$STAGE.png"
   done
   xcrun simctl status_bar "$UDID" clear >/dev/null
+  if [[ -n "$PREVIOUS_LOCALE" && "$PREVIOUS_LOCALE" != "$LOCALE" && -z "${KEEP_SIM_LANGUAGE:-}" ]]; then
+    xcrun simctl spawn "$UDID" defaults write -g AppleLanguages -array ${(s:,:)PREVIOUS_LANGUAGES}
+    xcrun simctl spawn "$UDID" defaults write -g AppleLocale "$PREVIOUS_LOCALE"
+    xcrun simctl shutdown "$UDID"
+  fi
 done

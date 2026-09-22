@@ -449,6 +449,15 @@ final class GameSession {
         startClock()
     }
 
+    #if DEBUG
+    /// Store screenshots: a staged solve takes seconds, which would read as
+    /// "solved in 00:00:02" on the completion card.
+    func debugAddPlayTime(_ seconds: TimeInterval) {
+        accumulated += seconds
+        tick()
+    }
+    #endif
+
     /// Debug/test helper used by the "solve" menu command.
     func solveImmediately() {
         pushUndo()
