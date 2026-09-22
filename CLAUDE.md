@@ -155,8 +155,10 @@ becomes `sea_X.jpg`, which is why `LibraryCatalog.bundled()` and
 `Feedback.soundURL` look up with `subdirectory: nil`. Consequences: no two
 resources may share a name, and a `.gitkeep`/README inside those folders is
 copied too (two of them collide with "multiple commands produce"). The
-`Pictures/` and `Sounds/` folders therefore do not exist in git; the user
-creates them when they have files. See `docs/app-store.md` §5–6.
+`Pictures/` folder therefore does not exist in git; the user creates it
+when they have files. `Sounds/` holds the effects made by
+`Scripts/make-sounds.swift` — CAF, not AAC, because AAC's encoder priming
+puts ~50 ms of silence in front of every tap. See `docs/app-store.md` §5–6.
 
 **Bundled picture titles are manual catalog keys.** `bundledItem(at:)` calls
 `String(localized:)` with the file name's title at runtime, so Xcode's string

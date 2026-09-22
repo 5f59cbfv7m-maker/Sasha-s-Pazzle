@@ -1,0 +1,382 @@
+#!/usr/bin/env swift
+// Sound effects and a draft of the background music for Sasha's Puzzles.
+//
+//   swift Scripts/make-sounds.swift [outdir]      # default ~/Desktop/Sasha's Sounds
+//
+// Effects come in variants (snap-A.caf …) to pick by ear; rename the chosen
+// ones to snap / merge / complete and drop them into Sources/Resources/Sounds/.
+// The music is written as MIDI (music.mid — open it in Logic and pick real
+// instruments) and rendered through the General MIDI bank built into macOS
+// (music-draft.m4a), folded so the end flows into the start without a seam.
+import AVFoundation
+
+let home = FileManager.default.homeDirectoryForCurrentUser
+let out = CommandLine.arguments.count > 1
+    ? URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+    : home.appending(path: "Desktop/Sasha's Sounds", directoryHint: .isDirectory)
+try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+let rate = 44_100.0
+
+func hz(_ midi: Double) -> Double { 440 * pow(2, (midi - 69) / 12) }
+
+// MARK: - Synthesis primitives
+
+var seed: UInt64 = 0x5A5A_1234
+func noise() -> Double {
+    seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+    return Double(Int64(bitPattern: seed) >> 11) / Double(1 << 52)
+}
+
+struct Sound {
+    var samples: [Double]
+    init(seconds: Double) { samples = Array(repeating: 0, count: Int(seconds * rate)) }
+
+    /// A struck resonance: exponentially decaying sine (decay = time constant, s).
+    mutating func mode(_ f: Double, _ amp: Double, decay: Double, at start: Double = 0, attack: Double = 0.0015) {
+        let first = Int(start * rate)
+        for i in first..<samples.count {
+            let t = Double(i - first) / rate
+            let env = min(1, t / attack) * exp(-t / decay)
+            if env < 1e-5, t > attack { break }
+            samples[i] += amp * env * sin(2 * .pi * f * t)
+        }
+    }
+
+    /// The contact itself: a burst of noise, `brightness` 0 (dull) … 1 (sharp).
+    mutating func click(_ amp: Double, decay: Double, brightness: Double, at start: Double = 0) {
+        let first = Int(start * rate)
+        var low = 0.0
+        for i in first..<samples.count {
+            let t = Double(i - first) / rate
+            let env = exp(-t / decay)
+            if env < 1e-5 { break }
+            let n = noise()
+            low += (n - low) * (0.05 + 0.5 * (1 - brightness))
+            samples[i] += amp * env * (brightness * (n - low) + (1 - brightness) * low)
+        }
+    }
+
+    /// A felt thump: a sine whose pitch falls as it dies away.
+    mutating func thump(from f0: Double, to f1: Double, _ amp: Double, decay: Double, at start: Double = 0) {
+        let first = Int(start * rate)
+        var phase = 0.0
+        for i in first..<samples.count {
+            let t = Double(i - first) / rate
+            let env = min(1, t / 0.002) * exp(-t / decay)
+            if env < 1e-5, t > 0.002 { break }
+            phase += 2 * .pi * (f1 + (f0 - f1) * exp(-t / 0.02)) / rate
+            samples[i] += amp * env * sin(phase)
+        }
+    }
+
+    mutating func marimba(_ midi: Double, _ amp: Double, at start: Double) {
+        let f = hz(midi)
+        mode(f, amp, decay: 0.45, at: start, attack: 0.002)
+        mode(f * 3.93, amp * 0.25, decay: 0.08, at: start)
+        mode(f * 9.2, amp * 0.06, decay: 0.025, at: start)
+        click(amp * 0.08, decay: 0.002, brightness: 0.3, at: start)
+    }
+
+    mutating func kalimba(_ midi: Double, _ amp: Double, at start: Double) {
+        let f = hz(midi)
+        mode(f, amp, decay: 0.6, at: start, attack: 0.003)
+        mode(f * 5.4, amp * 0.12, decay: 0.05, at: start)
+        mode(f * 2.01, amp * 0.1, decay: 0.2, at: start)
+    }
+
+    /// Celesta / music box: bright, bell-like and short.
+    mutating func bell(_ midi: Double, _ amp: Double, at start: Double, decay: Double = 0.9) {
+        let f = hz(midi)
+        mode(f, amp, decay: decay, at: start, attack: 0.002)
+        mode(f * 2, amp * 0.3, decay: decay * 0.4, at: start)
+        mode(f * 5.4, amp * 0.1, decay: decay * 0.1, at: start)
+    }
+
+    /// A soft sustained chord: detuned sines with a slow swell and release.
+    mutating func pad(_ notes: [Double], _ amp: Double, at start: Double, length: Double, attack: Double = 0.35) {
+        let first = Int(start * rate), count = Int(length * rate)
+        for i in first..<min(samples.count, first + count) {
+            let t = Double(i - first) / rate
+            let env = min(1, t / attack) * min(1, (length - t) / 0.8)
+            var s = 0.0
+            for n in notes {
+                let f = hz(n)
+                s += sin(2 * .pi * f * 1.002 * t) + sin(2 * .pi * f * 0.998 * t) + 0.25 * sin(4 * .pi * f * t)
+            }
+            samples[i] += amp * env * s / Double(notes.count)
+        }
+    }
+
+    /// A small Schroeder room so the longer sounds do not ring in a vacuum.
+    mutating func reverb(_ mix: Double, size: Double = 1) {
+        var wet = Array(repeating: 0.0, count: samples.count)
+        for delay in [1557, 1617, 1491, 1422].map({ Int(Double($0) * size) }) {
+            var line = Array(repeating: 0.0, count: delay), index = 0, low = 0.0
+            for i in samples.indices {
+                let y = line[index]
+                low = y * 0.6 + low * 0.4
+                line[index] = samples[i] + low * 0.82
+                index = (index + 1) % delay
+                wet[i] += y / 4
+            }
+        }
+        for delay in [225, 556] {
+            var line = Array(repeating: 0.0, count: delay), index = 0
+            for i in wet.indices {
+                let y = line[index]
+                line[index] = wet[i] + y * 0.5
+                wet[i] = y - wet[i] * 0.5
+                index = (index + 1) % delay
+            }
+        }
+        for i in samples.indices { samples[i] += mix * wet[i] }
+    }
+
+    /// Peak-normalise, then fade the last 10 ms so the end never clicks.
+    func finished(peak: Double) -> [Float] {
+        let top = samples.map(abs).max() ?? 1
+        let fade = Int(0.01 * rate)
+        return samples.enumerated().map { i, s in
+            Float(s / top * peak * min(1, Double(samples.count - i) / Double(fade)))
+        }
+    }
+}
+
+func write(_ channels: [[Float]], to url: URL, settings: [String: Any]) throws {
+    let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: AVAudioChannelCount(channels.count))!
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(channels[0].count))!
+    buffer.frameLength = buffer.frameCapacity
+    for (c, data) in channels.enumerated() {
+        data.withUnsafeBufferPointer { buffer.floatChannelData![c].update(from: $0.baseAddress!, count: data.count) }
+    }
+    try? FileManager.default.removeItem(at: url)
+    let file = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+    try file.write(from: buffer)
+}
+
+/// Effects are tiny, so they stay uncompressed CAF: AAC would add ~50 ms of
+/// encoder priming in front of every tap.
+func effect(_ name: String, _ sound: Sound, peak: Double = 0.7) throws {
+    try write([sound.finished(peak: peak)], to: out.appending(path: "\(name).caf"),
+              settings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: rate,
+                         AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: 16,
+                         AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false])
+    print("\(name).caf")
+}
+
+// MARK: - Effects
+
+// snap: a piece settles into place.
+func woodTap(_ s: inout Sound, _ amp: Double = 1, at t: Double = 0) {
+    s.click(0.5 * amp, decay: 0.004, brightness: 0.8, at: t)
+    s.mode(720, 0.5 * amp, decay: 0.045, at: t)
+    s.mode(1650, 0.3 * amp, decay: 0.025, at: t)
+    s.mode(2900, 0.15 * amp, decay: 0.012, at: t)
+    s.mode(180, 0.35 * amp, decay: 0.03, at: t)
+}
+var snapA = Sound(seconds: 0.25); woodTap(&snapA)
+try effect("snap-A (дерево)", snapA)
+
+var snapB = Sound(seconds: 0.25)
+snapB.thump(from: 260, to: 150, 0.8, decay: 0.05)
+snapB.click(0.15, decay: 0.003, brightness: 0.2)
+try effect("snap-B (мягкий войлок)", snapB)
+
+var snapC = Sound(seconds: 0.2)
+snapC.click(0.6, decay: 0.006, brightness: 0.9)
+snapC.mode(420, 0.35, decay: 0.02)
+snapC.mode(2300, 0.25, decay: 0.01)
+snapC.click(0.25, decay: 0.003, brightness: 0.9, at: 0.018)
+try effect("snap-C (картон, щёлк)", snapC)
+
+// merge: two groups join.
+var mergeA = Sound(seconds: 1.0)
+woodTap(&mergeA, 0.6); mergeA.marimba(67, 0.6, at: 0.03); mergeA.marimba(74, 0.55, at: 0.14)
+mergeA.reverb(0.12)
+try effect("merge-A (маримба, две ноты)", mergeA)
+
+var mergeB = Sound(seconds: 1.1)
+mergeB.thump(from: 260, to: 150, 0.4, decay: 0.05)
+mergeB.kalimba(72, 0.6, at: 0.02); mergeB.kalimba(79, 0.5, at: 0.12)
+mergeB.reverb(0.15)
+try effect("merge-B (калимба)", mergeB)
+
+var mergeC = Sound(seconds: 1.2)
+woodTap(&mergeC, 0.7); mergeC.bell(88, 0.25, at: 0.04, decay: 0.5)
+mergeC.reverb(0.2)
+try effect("merge-C (дерево и колокольчик)", mergeC)
+
+// complete: the picture is finished. F major, like the music.
+var completeA = Sound(seconds: 2.8)
+for (i, note) in [77.0, 81, 84, 89].enumerated() { completeA.marimba(note, 0.5, at: Double(i) * 0.12) }
+for (i, note) in [77.0, 81, 84, 89].enumerated() { completeA.marimba(note, 0.35, at: 0.62 + Double(i) * 0.025) }
+completeA.pad([53, 60, 69], 0.12, at: 0.3, length: 2.4)
+completeA.reverb(0.25)
+try effect("complete-A (маримба, арпеджио)", completeA)
+
+var completeB = Sound(seconds: 3.0)
+for (i, note) in [84.0, 89, 93, 96, 101].enumerated() { completeB.bell(note, 0.35, at: Double(i) * 0.1) }
+for i in 0..<8 {   // sparkle: pentatonic notes, fading
+    let note = [89.0, 91, 93, 96, 98, 101][Int((noise() + 1) * 3) % 6]
+    completeB.bell(note, 0.18 * (1 - Double(i) / 9), at: 0.6 + Double(i) * 0.17, decay: 0.5)
+}
+completeB.pad([53, 60, 65, 69], 0.1, at: 0.2, length: 2.6)
+completeB.reverb(0.3)
+try effect("complete-B (музыкальная шкатулка)", completeB)
+
+var completeC = Sound(seconds: 2.8)
+completeC.pad([41, 53, 60, 65, 69], 0.3, at: 0, length: 2.6, attack: 0.25)
+completeC.bell(84, 0.3, at: 0.05, decay: 1.2); completeC.bell(89, 0.25, at: 0.45, decay: 1.2)
+completeC.reverb(0.35)
+try effect("complete-C (тёплый аккорд)", completeC)
+
+// MARK: - Music
+
+let bpm = 76.0, tpq = 480
+struct Chord { var root: Int; var minor = false; var seventh = false; var bass: Int? }
+let phraseA = [Chord(root: 5), Chord(root: 0, bass: 4), Chord(root: 2, minor: true), Chord(root: 9, minor: true),
+               Chord(root: 10), Chord(root: 5, bass: 9), Chord(root: 7, minor: true, seventh: true), Chord(root: 0)]
+let phraseB = [Chord(root: 10), Chord(root: 0), Chord(root: 9, minor: true), Chord(root: 2, minor: true),
+               Chord(root: 7, minor: true, seventh: true), Chord(root: 0, bass: 4), Chord(root: 5), Chord(root: 0, seventh: true)]
+let melodyA: [[(Int, Double)]] = [
+    [(72, 1.5), (69, 0.5), (65, 1), (69, 1)], [(67, 2), (64, 1), (67, 1)],
+    [(65, 1.5), (69, 0.5), (74, 2)], [(72, 4)],
+    [(74, 1.5), (72, 0.5), (70, 1), (74, 1)], [(72, 1.5), (69, 0.5), (65, 2)],
+    [(67, 1), (69, 1), (70, 1), (74, 1)], [(72, 3), (0, 1)]]
+let melodyB: [[(Int, Double)]] = [
+    [(77, 2), (74, 1), (70, 1)], [(76, 2), (72, 1), (67, 1)],
+    [(69, 1.5), (72, 0.5), (76, 2)], [(74, 3), (0, 1)],
+    [(70, 1), (74, 1), (77, 1), (74, 1)], [(72, 1.5), (70, 0.5), (67, 2)],
+    [(69, 2), (67, 1), (65, 1)], [(67, 2), (0, 2)]]
+// Two passes; the second plays the first phrase an octave up and softer.
+let chords = phraseA + phraseB + phraseA + phraseB
+let melody = melodyA + melodyB + melodyA.map { $0.map { ($0.0 == 0 ? 0 : $0.0 + 12, $0.1) } } + melodyB
+let beats = Double(chords.count * 4)
+
+struct Note { var track: Int; var pitch: Int; var start: Double; var length: Double; var velocity: Int }
+var notes: [Note] = []
+for (bar, chord) in chords.enumerated() {
+    let t0 = Double(bar * 4)
+    let third = chord.minor ? 3 : 4
+    var base = 36 + chord.root; if base < 41 { base += 12 }
+    var bass = 24 + (chord.bass ?? chord.root); if bass < 29 { bass += 12 }
+    let top = chord.seventh ? base + 22 : base + 19
+    // Piano: a rolling eighth-note figure, each note held to the bar line like a pedal.
+    for (i, pitch) in [bass, base + 7, base + 12, base + 12 + third, top, base + 12 + third, base + 12, base + 7].enumerated() {
+        let start = t0 + Double(i) * 0.5
+        notes.append(Note(track: 1, pitch: pitch, start: start, length: t0 + 4 - start,
+                          velocity: i == 0 ? 52 : 40 + (i % 3) * 3))
+    }
+    notes.append(contentsOf: [base + 12, base + 12 + third, base + 19].map {
+        Note(track: 2, pitch: $0, start: t0, length: 4, velocity: 34) })
+    var t = t0
+    let soft = (16..<24).contains(bar)
+    for (pitch, length) in melody[bar] {
+        if pitch > 0 {
+            notes.append(Note(track: 0, pitch: pitch, start: t, length: length * 0.95,
+                              velocity: (soft ? 52 : 68) + Int(noise() * 5)))
+        }
+        t += length
+    }
+}
+
+// MIDI file for Logic: a conductor track and one track per part.
+func vlq(_ value: Int) -> [UInt8] {
+    var v = value, bytes = [UInt8(v & 0x7F)]
+    v >>= 7
+    while v > 0 { bytes.insert(UInt8(v & 0x7F) | 0x80, at: 0); v >>= 7 }
+    return bytes
+}
+func be(_ v: Int, _ n: Int) -> [UInt8] { (0..<n).reversed().map { UInt8((v >> ($0 * 8)) & 0xFF) } }
+func chunk(_ name: String, _ events: [(tick: Int, off: Bool, bytes: [UInt8])]) -> [UInt8] {
+    var data: [UInt8] = [0, 0xFF, 0x03] + vlq(name.utf8.count) + Array(name.utf8)
+    var last = 0
+    for e in events.sorted(by: { ($0.tick, $0.off ? 0 : 1) < ($1.tick, $1.off ? 0 : 1) }) {
+        data += vlq(e.tick - last) + e.bytes
+        last = e.tick
+    }
+    data += [0, 0xFF, 0x2F, 0]
+    return Array("MTrk".utf8) + be(data.count, 4) + data
+}
+let names = ["Melody (vibraphone)", "Piano", "Pad"]
+var midi = Array("MThd".utf8) + be(6, 4) + be(1, 2) + be(names.count + 1, 2) + be(tpq, 2)
+midi += chunk("Sasha's Puzzles", [(0, false, [0xFF, 0x51, 0x03] + be(Int(60_000_000 / bpm), 3)),
+                                  (0, false, [0xFF, 0x58, 0x04, 4, 2, 24, 8])])
+for (track, name) in names.enumerated() {
+    var events: [(tick: Int, off: Bool, bytes: [UInt8])] = []
+    for n in notes where n.track == track {
+        let on: [UInt8] = [UInt8(0x90 | track), UInt8(n.pitch), UInt8(n.velocity)]
+        let off: [UInt8] = [UInt8(0x80 | track), UInt8(n.pitch), 0]
+        events.append((Int(n.start * Double(tpq)), false, on))
+        events.append((Int((n.start + n.length) * Double(tpq)), true, off))
+    }
+    midi += chunk(name, events)
+}
+try Data(midi).write(to: out.appending(path: "music.mid"))
+print("music.mid")
+
+// Draft render: General MIDI bank, notes fired block by block (1.5 ms blocks).
+let engine = AVAudioEngine()
+let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2)!
+try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 64)
+let bank = URL(fileURLWithPath: "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls")
+let samplers = [11, 0, 89].map { program -> AVAudioUnitSampler in   // vibraphone, grand piano, warm pad
+    let s = AVAudioUnitSampler()
+    engine.attach(s)
+    engine.connect(s, to: engine.mainMixerNode, format: format)
+    try! s.loadSoundBankInstrument(at: bank, program: UInt8(program),
+                                   bankMSB: UInt8(kAUSampler_DefaultMelodicBankMSB), bankLSB: UInt8(kAUSampler_DefaultBankLSB))
+    return s
+}
+let room = AVAudioUnitReverb()
+room.loadFactoryPreset(.mediumHall); room.wetDryMix = 22
+engine.attach(room)
+engine.connect(engine.mainMixerNode, to: room, format: format)
+engine.connect(room, to: engine.outputNode, format: format)
+try engine.start()
+
+let secondsPerBeat = 60 / bpm
+let loopFrames = Int(beats * secondsPerBeat * rate), tailFrames = Int(5 * rate)
+var events = notes.flatMap { n in
+    [(frame: Int(n.start * secondsPerBeat * rate), on: true, n), (frame: Int((n.start + n.length) * secondsPerBeat * rate), on: false, n)]
+}.sorted { ($0.frame, $0.on ? 1 : 0) < ($1.frame, $1.on ? 1 : 0) }
+var left: [Float] = [], right: [Float] = []
+let block = AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: 64)!
+var frame = 0, next = 0
+while frame < loopFrames + tailFrames {
+    while next < events.count, events[next].frame < frame + 64 {
+        let e = events[next]
+        if e.on { samplers[e.2.track].startNote(UInt8(e.2.pitch), withVelocity: UInt8(e.2.velocity), onChannel: 0) }
+        else { samplers[e.2.track].stopNote(UInt8(e.2.pitch), onChannel: 0) }
+        next += 1
+    }
+    guard try engine.renderOffline(64, to: block) == .success else { fatalError("render failed") }
+    left += UnsafeBufferPointer(start: block.floatChannelData![0], count: Int(block.frameLength))
+    right += UnsafeBufferPointer(start: block.floatChannelData![1], count: Int(block.frameLength))
+    frame += Int(block.frameLength)
+}
+// Fold the release of the last bar onto the first so the loop has no seam.
+for i in 0..<tailFrames { left[i] += left[loopFrames + i]; right[i] += right[loopFrames + i] }
+left.removeLast(left.count - loopFrames); right.removeLast(right.count - loopFrames)
+let peak = max(left.map(abs).max()!, right.map(abs).max()!)
+guard peak > 0.001 else { fatalError("music rendered silent") }
+let gain = 0.89 / peak   // -1 dBFS
+left = left.map { $0 * gain }; right = right.map { $0 * gain }
+
+let wav = out.appending(path: "music-draft.wav")
+try write([left, right], to: wav, settings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: rate,
+                                             AVNumberOfChannelsKey: 2, AVLinearPCMBitDepthKey: 16,
+                                             AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false])
+let m4a = out.appending(path: "music-draft.m4a")
+try? FileManager.default.removeItem(at: m4a)
+let convert = Process()
+convert.executableURL = URL(fileURLWithPath: "/usr/bin/afconvert")
+convert.arguments = ["-f", "m4af", "-d", "aac", "-b", "160000", wav.path, m4a.path]
+try convert.run(); convert.waitUntilExit()
+try FileManager.default.removeItem(at: wav)
+// Loudness by 10-second stretch, as a sanity check nobody has to listen for.
+let rms = stride(from: 0, to: loopFrames, by: Int(10 * rate)).map { start -> String in
+    let slice = left[start..<min(loopFrames, start + Int(10 * rate))]
+    return String(format: "%.0f", 20 * log10(sqrt(slice.reduce(0) { $0 + Double($1 * $1) } / Double(slice.count))))
+}
+print("music-draft.m4a  \(String(format: "%.0f", Double(loopFrames) / rate)) s, RMS dB per 10 s: \(rms.joined(separator: " "))")
