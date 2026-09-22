@@ -41,8 +41,8 @@
       (текст в `docs/privacy.md`; замените контактный e-mail, если хотите другой).
 - [ ] Support URL: `https://github.com/5f59cbfv7m-maker/Sasha-s-Puzzles`.
 - [ ] Pricing: Free (или цена) + страны.
-- [ ] Тексты из раздела 2 — для English и Russian (остальные языки можно
-      добавить позже, App Store Connect показывает английский как fallback).
+- [ ] Тексты из раздела 2 — готовы на 10 языках, вставить каждый в свою
+      локализацию (App Store → Localizations → «+»).
 - [ ] Скриншоты из раздела 3.
 - [ ] App Review Information: контакт, заметки «Fully offline, no account.
       Tap any picture → Start puzzle.» Демо-логин не нужен.
@@ -69,72 +69,10 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 
 ## 2. Тексты для App Store Connect
 
-Ограничения: название 30 символов, подзаголовок 30, промо-текст 170,
-ключевые слова 100 (через запятую, без пробелов), описание 4000.
-
-### English (U.S.)
-
-**Name:** Sasha's Puzzles
-**Subtitle:** Jigsaws from your own photos
-**Promotional text:** A calm jigsaw table with a new puzzle every day. Turn any photo into a puzzle — 12 to 800 pieces, fully offline.
-**Keywords:** `jigsaw,puzzle,puzzles,photo,relax,daily,offline,family,kids,pieces,calm,picture`
-**Description:**
-
-> Sasha's Puzzles is a jigsaw table that feels like the real thing — warm, quiet and yours.
->
-> REAL PIECES
-> Every cut exists once and is shared by its two neighbours, so pieces meet exactly: no gaps, no "close enough". Pieces click into place with a soft sound and a gentle haptic tap.
->
-> YOUR PHOTOS ARE PUZZLES TOO
-> Pick any photo from your library and choose 12 to 800 pieces. Frame it the way you like — nothing is ever stretched.
->
-> A NEW PUZZLE EVERY DAY
-> The daily puzzle keeps a streak going. Solve it seven days in a row and earn an achievement.
->
-> JUST THE HELP YOU NEED
-> Snap assist pulls a piece home when it is close. A hint highlights the next step. A faint guide of the picture can sit under the board — or not. Everything is a switch in Settings.
->
-> BUILT FOR THE IPAD
-> Drag pieces from the tray with your finger, pinch to zoom, scatter pieces across the whole table or keep them tidy. Works in portrait and landscape, light and dark.
->
-> COMPLETELY OFFLINE
-> No account, no ads, no tracking, nothing leaves your device. The table is saved automatically — come back whenever you like.
->
-> Also on Mac with keyboard shortcuts, undo and redo.
-
-**What's New (1.0):** First release.
-
-### Russian
-
-**Name:** Sasha's Puzzles
-**Subtitle:** Пазлы из ваших фотографий
-**Promotional text:** Спокойный стол для пазлов и новый пазл каждый день. Любое фото становится пазлом — от 12 до 800 деталей, полностью офлайн.
-**Keywords:** `пазл,пазлы,головоломка,фото,картинки,релакс,офлайн,семья,дети,детали,спокойствие`
-**Description:**
-
-> Sasha's Puzzles — стол для пазлов, который ощущается как настоящий: тёплый, тихий и ваш.
->
-> НАСТОЯЩИЕ ДЕТАЛИ
-> Каждый разрез существует один раз и общий для двух соседей, поэтому детали сходятся точно — без зазоров и «примерно рядом». Деталь встаёт на место с мягким звуком и лёгким тактильным откликом.
->
-> ВАШИ ФОТО — ТОЖЕ ПАЗЛЫ
-> Выберите любое фото из галереи и число деталей от 12 до 800. Кадрируйте как нравится — растяжения не бывает никогда.
->
-> НОВЫЙ ПАЗЛ КАЖДЫЙ ДЕНЬ
-> Пазл дня поддерживает серию. Соберите его семь дней подряд — и получите достижение.
->
-> ПОМОЩЬ РОВНО ТА, ЧТО НУЖНА
-> Помощь при стыковке притягивает деталь, когда она рядом. Подсказка подсвечивает следующий шаг. Бледная картинка-подсказка может лежать под полем — или нет. Всё это переключатели в настройках.
->
-> СДЕЛАНО ДЛЯ IPAD
-> Перетаскивайте детали из лотка пальцем, масштабируйте щипком, рассыпайте детали по всему столу или держите их в порядке. Работает в портретной и альбомной ориентации, в светлой и тёмной теме.
->
-> ПОЛНОСТЬЮ ОФЛАЙН
-> Без аккаунта, рекламы и слежки — ничего не покидает устройство. Стол сохраняется сам, возвращайтесь когда удобно.
->
-> Есть и на Mac — с клавиатурными сокращениями, отменой и повтором.
-
-**What's New (1.0):** Первый выпуск.
+Название, подзаголовок, промо-текст, ключевые слова, описание и «Что
+нового» на всех 10 языках интерфейса — в [`store-listing.md`](store-listing.md).
+Лимиты: название 30 символов, подзаголовок 30, промо-текст 170, ключевые
+слова 100 (через запятую, без пробелов), описание 4000.
 
 ## 3. Скриншоты
 
@@ -180,8 +118,9 @@ Xcode нет; переводы сделаны вручную.
   появится пустой столбец; строки без перевода показываются по-английски.
 - Проверить, как выглядит: Scheme → Run → Options → App Language, или из
   терминала `-AppleLanguages "(ja)"` (см. `CLAUDE.md`).
-- Тексты в App Store Connect переводятся отдельно, в веб-интерфейсе, для
-  каждого языка магазина.
+- Тексты для App Store Connect на тех же 10 языках — в
+  [`store-listing.md`](store-listing.md); вставляются в веб-интерфейсе,
+  отдельно для каждого языка магазина.
 
 Названия встроенных картинок — тоже строки каталога, см. следующий раздел.
 

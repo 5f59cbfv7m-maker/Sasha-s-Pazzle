@@ -393,7 +393,8 @@ resizing are handled by the same code path as rotation.
 - Ten languages (English, Russian, German, French, Spanish, Italian,
   Brazilian Portuguese, Japanese, Korean, Simplified Chinese), Dynamic Type,
   VoiceOver labels, light and dark
-- `docs/app-store.md` — release checklist, store copy, screenshot script
+- `docs/app-store.md` — release checklist, screenshot script
+- `docs/store-listing.md` — App Store copy in all 10 languages
 
 ## Tests
 
