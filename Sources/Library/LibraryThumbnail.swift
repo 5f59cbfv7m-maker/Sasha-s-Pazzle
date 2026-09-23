@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Lazily produced preview of a library picture.
 ///
-/// Generated art is rendered on demand at thumbnail resolution — roughly ten
-/// milliseconds — and cached, so scrolling the library never blocks the main thread.
+/// Photos are decoded on demand at thumbnail resolution, off the main actor, and
+/// cached, so scrolling the library never blocks the main thread.
 struct LibraryThumbnail: View {
     let item: LibraryItem
     var longSide: Int = 420

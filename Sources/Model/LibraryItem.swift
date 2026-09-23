@@ -3,9 +3,6 @@ import Foundation
 
 /// Where a puzzle picture comes from.
 nonisolated enum ImageSource: Sendable, Hashable, Codable {
-    /// Generated on device from a family + seed. Costs nothing in the bundle and
-    /// is reproducible, so a saved game only stores the identifier.
-    case generated(family: ArtFamily, seed: UInt64)
     /// A photo the user imported; `fileName` lives in the app's library folder.
     case imported(fileName: String)
     /// A photograph shipped in the bundle from `Resources/Pictures/`.

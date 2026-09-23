@@ -3,11 +3,11 @@ import Foundation
 import Testing
 @testable import JigsawPuzzle
 
-@Suite("Images, artwork and rendering")
+@Suite("Images and rendering")
 struct ImageTests {
 
     private func makeImage(width: Int, height: Int) -> RenderedImage {
-        let context = ArtToolkit.makeContext(size: CGSize(width: width, height: height))!
+        let context = CGContext.bitmap(size: CGSize(width: width, height: height))!
         context.setFillColor(CGColor(red: 0.2, green: 0.5, blue: 0.8, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         return RenderedImage(cgImage: context.makeImage()!)
@@ -73,62 +73,14 @@ struct ImageTests {
         }
     }
 
-    @Test("Every artwork family renders and is reproducible")
-    func artworkIsDeterministic() {
-        let size = CGSize(width: 200, height: 140)
-        for family in ArtFamily.allCases {
-            let first = ArtRenderer.render(family: family, variant: 2, size: size)
-            #expect(first != nil, "\(family) produced no image")
-            #expect(first?.width == 200 && first?.height == 140)
-        }
-        let a = ArtRenderer.render(family: .nebula, variant: 3, size: size)!
-        let b = ArtRenderer.render(family: .nebula, variant: 3, size: size)!
-        #expect(pixels(of: a) == pixels(of: b), "the same seed must repaint the same picture")
-
-        let c = ArtRenderer.render(family: .nebula, variant: 4, size: size)!
-        #expect(pixels(of: a) != pixels(of: c), "different variants must differ")
-    }
-
-    @Test("Generated pictures carry enough local detail to be solvable")
-    func artworkHasLocalContrast() {
-        // A puzzle made of flat colour is unsolvable, so every family must vary
-        // within a piece-sized window.
-        let size = CGSize(width: 320, height: 220)
-        for family in ArtFamily.allCases {
-            let image = ArtRenderer.render(family: family, variant: 5, size: size)!
-            let data = pixels(of: image)
-            let bytesPerRow = image.bytesPerRow
-            var flatTiles = 0, tiles = 0
-            for tileY in stride(from: 0, to: 200, by: 20) {
-                for tileX in stride(from: 0, to: 300, by: 20) {
-                    var low = 255, high = 0
-                    for y in tileY..<(tileY + 20) {
-                        for x in tileX..<(tileX + 20) {
-                            let index = y * bytesPerRow + x * 4
-                            guard index + 2 < data.count else { continue }
-                            let luma = (Int(data[index]) + Int(data[index + 1]) + Int(data[index + 2])) / 3
-                            low = min(low, luma)
-                            high = max(high, luma)
-                        }
-                    }
-                    tiles += 1
-                    if high - low < 6 { flatTiles += 1 }
-                }
-            }
-            #expect(Double(flatTiles) / Double(tiles) < 0.35,
-                    "\(family): \(flatTiles)/\(tiles) tiles are flat")
-        }
-    }
-
     @Test("Piece textures cover the whole outline at the right scale")
     func textureRendering() {
         let geometry = PuzzleGeometry(columns: 6, rows: 4, aspect: 1.5, seed: 4242)
-        let source = ArtRenderer.render(family: .mosaic, variant: 1,
-                                        size: CGSize(width: 900, height: 600))!
+        let source = makeImage(width: 900, height: 600)
         let scale = PieceTextureStore.affordableScale(for: geometry, desired: 2)
         let textures = PieceTextureStore.render(pieces: Array(0..<geometry.pieceCount),
                                                 geometry: geometry,
-                                                source: RenderedImage(cgImage: source),
+                                                source: source,
                                                 pixelScale: scale, outlines: true)
         #expect(textures.count == geometry.pieceCount)
         for piece in 0..<geometry.pieceCount {
@@ -143,8 +95,7 @@ struct ImageTests {
     @MainActor
     func textureRecutIsSilent() async throws {
         let geometry = PuzzleGeometry(columns: 4, rows: 3, aspect: 1.5, seed: 7)
-        let source = RenderedImage(cgImage: ArtRenderer.render(family: .mosaic, variant: 1,
-                                                               size: CGSize(width: 600, height: 400))!)
+        let source = makeImage(width: 600, height: 400)
         let store = PieceTextureStore()
         store.rebuild(geometry: geometry, source: source, pixelScale: 1, outlines: false)
         #expect(!store.isReady)
@@ -174,10 +125,6 @@ struct ImageTests {
         let pixels = Double((cell.width + overhang) * (cell.height + overhang))
             * Double(huge.pieceCount) * Double(hugeScale * hugeScale)
         #expect(pixels <= PieceTextureStore.pixelBudget * 1.05)
-    }
-
-    private func pixels(of image: CGImage) -> Data {
-        (image.dataProvider?.data as Data?) ?? Data()
     }
 }
 

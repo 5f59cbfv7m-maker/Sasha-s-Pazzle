@@ -1,6 +1,21 @@
 import CoreGraphics
 import Foundation
 
+nonisolated extension CGContext {
+    /// An sRGB, premultiplied 32-bit bitmap — the one format every piece
+    /// texture is cut into.
+    static func bitmap(size: CGSize) -> CGContext? {
+        let width = max(1, Int(size.width.rounded())), height = max(1, Int(size.height.rounded()))
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        let context = CGContext(data: nil, width: width, height: height,
+                                bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+                                    | CGBitmapInfo.byteOrder32Little.rawValue)
+        context?.interpolationQuality = .high
+        return context
+    }
+}
+
 nonisolated extension CGPoint {
     static func + (lhs: CGPoint, rhs: CGPoint) -> CGPoint { CGPoint(x: lhs.x + rhs.x, y: lhs.y + rhs.y) }
     static func - (lhs: CGPoint, rhs: CGPoint) -> CGPoint { CGPoint(x: lhs.x - rhs.x, y: lhs.y - rhs.y) }

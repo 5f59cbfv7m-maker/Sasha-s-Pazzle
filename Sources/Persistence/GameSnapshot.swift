@@ -49,6 +49,31 @@ nonisolated struct SaveStore: Sendable {
     private struct Archive: Codable {
         var version = 1
         var games: [GameSnapshot]
+
+        init(games: [GameSnapshot]) { self.games = games }
+
+        /// Game by game: one entry this build cannot read — a picture source
+        /// that no longer exists, such as the retired generated artwork —
+        /// drops only that game, never every save on the device.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+            var list = try container.nestedUnkeyedContainer(forKey: .games)
+            var games: [GameSnapshot] = []
+            while !list.isAtEnd {
+                if let game = try? list.decode(GameSnapshot.self) {
+                    games.append(game)
+                } else {
+                    _ = try list.decode(Skipped.self)
+                }
+            }
+            self.games = games
+        }
+
+        /// Consumes one element of any shape, so the list can move past it.
+        private nonisolated struct Skipped: Decodable {
+            init(from decoder: Decoder) throws {}
+        }
     }
 
     func load() -> [GameSnapshot] {

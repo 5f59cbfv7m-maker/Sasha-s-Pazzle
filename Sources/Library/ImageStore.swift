@@ -3,10 +3,11 @@ import Foundation
 
 /// Central supplier of pixels, with an in-memory LRU on top of a disk cache.
 ///
-/// Generated artwork is expensive the first time and free afterwards: the master
-/// bitmap is written to `Caches` as JPEG, so re-opening a picture — or relaunching
-/// the app — costs a decode instead of a render. Nothing here ever touches the
-/// network; the whole library works on a plane.
+/// Decoding and cropping a full-size photo is expensive the first time and cheap
+/// afterwards: the master bitmap is written to `Caches` as JPEG at the size the
+/// board needs, so re-opening a picture — or relaunching the app — costs one
+/// small decode. Nothing here ever touches the network; the whole library works
+/// on a plane.
 actor ImageStore {
     static let shared = ImageStore()
 
@@ -85,12 +86,6 @@ actor ImageStore {
 
         let produced: RenderedImage?
         switch request.item.source {
-        case let .generated(family, _):
-            let variant = variantIndex(of: request.item)
-            let aspect = request.aspect.ratio ?? family.preferredAspect
-            let size = canvasSize(longSide: request.longSide, aspect: aspect)
-            produced = ArtRenderer.render(family: family, variant: variant, size: size)
-                .map(RenderedImage.init(cgImage:))
         case let .imported(fileName):
             produced = decode(PhotoLibraryStore.photoURL(fileName: fileName), for: request)
         case let .bundled(fileName):
@@ -108,23 +103,6 @@ actor ImageStore {
         guard let url, let decoded = try? ImagePipeline.decode(url: url, maxPixelSize: request.longSide)
         else { return nil }
         return ImagePipeline.crop(decoded, toAspect: request.aspect.ratio)
-    }
-
-    private nonisolated static func canvasSize(longSide: Int, aspect: CGFloat) -> CGSize {
-        let long = CGFloat(longSide)
-        return aspect >= 1
-            ? CGSize(width: long, height: (long / aspect).rounded())
-            : CGSize(width: (long * aspect).rounded(), height: long)
-    }
-
-    /// Recovers the variant index encoded in a generated item's identifier.
-    private nonisolated static func variantIndex(of item: LibraryItem) -> Int {
-        guard case let .generated(family, _) = item.source else { return 0 }
-        for variant in 0..<ArtFamily.variantsPerFamily
-        where LibraryCatalog.identifier(family: family, variant: variant) == item.id {
-            return variant
-        }
-        return 0
     }
 
     private nonisolated static func cacheName(for request: Request) -> String {

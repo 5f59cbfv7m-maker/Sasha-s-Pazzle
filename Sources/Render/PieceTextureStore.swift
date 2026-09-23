@@ -155,7 +155,7 @@ final class PieceTextureStore {
         let pixelSize = CGSize(width: (bounds.width * pixelScale).rounded(.up),
                                height: (bounds.height * pixelScale).rounded(.up))
         guard pixelSize.width >= 2, pixelSize.height >= 2,
-              let context = ArtToolkit.makeContext(size: pixelSize) else { return nil }
+              let context = CGContext.bitmap(size: pixelSize) else { return nil }
 
         // Board units with y running downward, origin at the piece's cell corner.
         context.translateBy(x: 0, y: pixelSize.height)

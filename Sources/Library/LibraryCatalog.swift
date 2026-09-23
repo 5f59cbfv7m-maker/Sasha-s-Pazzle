@@ -3,12 +3,6 @@ import Foundation
 /// Builds the built-in picture library.
 nonisolated enum LibraryCatalog {
 
-    /// Generated pictures shipped alongside the photographs. Empty since the
-    /// library switched to real photos (`Resources/Pictures/`); the generators
-    /// stay so saved games of generated pictures still load, and a family can
-    /// come back as `(.galaxy, 0)` — the variant is its seed.
-    static let selection: [(family: ArtFamily, variant: Int)] = []
-
     static var count: Int { items.count }
 
     /// The daily puzzle is always played at this size.
@@ -21,27 +15,14 @@ nonisolated enum LibraryCatalog {
         return items[day % items.count]
     }
 
-    static func identifier(family: ArtFamily, variant: Int) -> String {
-        "gen.\(family.rawValue).\(variant)"
-    }
-
-    /// The built-in pictures: photographs from `Resources/Pictures/` first, then
-    /// the generated selection. Nothing is decoded here — bundled files only
-    /// have their header read — so the library screen appears instantly and
-    /// the bitmaps are produced lazily as cells scroll into view.
+    /// The built-in pictures: the photographs in `Resources/Pictures/`. Nothing
+    /// is decoded here — bundled files only have their header read — so the
+    /// library screen appears instantly and the bitmaps are produced lazily as
+    /// cells scroll into view.
     static func builtIn() -> [LibraryItem] { items }
 
     /// Built once: the list is pure, and the profile asks for it on every layout pass.
-    private static let items: [LibraryItem] = bundled() +
-        selection.map { family, variant in
-            LibraryItem(
-                id: identifier(family: family, variant: variant),
-                title: family.title,
-                category: family.category,
-                source: .generated(family: family, seed: family.seed(variant: variant)),
-                addedAt: .distantPast,
-                aspect: family.preferredAspect)
-        }
+    private static let items: [LibraryItem] = bundled()
 
     /// Photographs dropped into `Resources/Pictures/`. The file name carries
     /// the metadata — `sea_Sunset Beach.jpg` is category `sea`, title

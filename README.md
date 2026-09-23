@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/platforms-macOS%2015%20%7C%20iOS%2018%20%7C%20iPadOS%2018-1B7FD1" alt="Platforms">
   <img src="https://img.shields.io/badge/Swift-6.0-F05138" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-16%2B-147EFB" alt="Xcode 16+">
-  <img src="https://img.shields.io/badge/tests-66%20passing-3FB950" alt="66 tests passing">
+  <img src="https://img.shields.io/badge/tests-65%20passing-3FB950" alt="65 tests passing">
   <img src="https://img.shields.io/badge/dependencies-none-8B949E" alt="No dependencies">
   <img src="https://img.shields.io/badge/offline-100%25-8B949E" alt="Works offline">
 </p>
@@ -126,8 +126,8 @@ To get an icon you can double-click instead of launching from Xcode every time:
 ./Scripts/install-mac.sh /Applications   # into Launchpad and Spotlight
 ```
 
-That builds the Release configuration — noticeably faster than Debug, since the
-procedural artwork is arithmetic-heavy — and copies the bundle out of
+That builds the Release configuration — noticeably faster than Debug — and
+copies the bundle out of
 `DerivedData`. The bundle identifier does not change, so saved games and
 imported photos carry over. Re-run the script after any change to refresh the
 installed copy.
@@ -241,7 +241,6 @@ An 800-piece board is the design target, not an afterthought.
 
 | Stage | Release | Debug (`-Onone`) |
 |---|---|---|
-| Generate a 2800 px picture | 0.20 s | 0.41 s |
 | Build 35 × 23 geometry | < 0.01 s | < 0.01 s |
 | Cut 805 piece bitmaps | 0.05 s | 0.05 s |
 
@@ -263,9 +262,6 @@ Measured on an Apple Silicon Mac. What makes it work:
 * **Downsampled decoding.** Imported photos are never fully materialised — the
   longest edge is capped at 4096 px on import and decoded through ImageIO
   thumbnails thereafter.
-* **Noise at a fraction of output resolution.** Procedural artwork samples its
-  noise fields at ≤ 560 px and upsamples; the permutation table is a raw buffer
-  so the innermost loop stays fast even in an unoptimised build.
 
 ---
 
@@ -277,18 +273,8 @@ long side, across space, mountains, nature, sea, city, animals and abstract.
 They live in `Sources/Resources/Pictures/` as `<category>_<Title>.jpg`; the
 title is a string-catalog key translated into all ten languages.
 
-The procedural generators that drew the earlier library are still in
-`Sources/Art/`: each of the 29 families paints seeded variants, and a saved game
-stores the family and seed, so a generated puzzle in progress still loads.
-`LibraryCatalog.selection` can bring any of them back.
-
-Every artwork ends with a mandatory detail pass — structured, multi-scale texture
-rather than smooth gradients — because an 800-piece puzzle is only solvable if
-neighbouring pieces look different. A test asserts that no family produces a
-picture with too many flat regions.
-
-Pictures are produced lazily at the size actually needed and cached in memory
-(LRU) and on disk, so opening one twice is a decode rather than a render.
+Pictures are decoded lazily at the size actually needed and cached in memory
+(LRU) and on disk, so opening one twice is a small decode rather than a full one.
 
 **Your own photos** are imported through `PhotosPicker` (multi-select) or from
 Files, copied as optimised JPEGs into the app container, indexed by a small JSON
@@ -326,17 +312,16 @@ Sources/
 ├── Engine/       EdgeProfile · PuzzleGeometry · PuzzleState   ← pure, testable, Sendable
 ├── Render/       PieceTextureStore (parallel bitmap cutting + bevel)
 ├── Interaction/  Viewport, BoardEventView (AppKit/UIKit input bridge)
-├── Art/          Noise, Palette, ArtToolkit, ArtFamily, ArtRenderer
 ├── Library/      ImagePipeline, ImageStore, PhotoLibraryStore, HomeView, ProfileView
 ├── Game/         GameSession, BoardView, TrayView, SetupView, overlays
 ├── Settings/     AppSettings, SettingsView
 ├── Persistence/  GameSnapshot, SaveStore, PlayerStats (achievements, streaks)
 ├── Support/      Theme (tokens, fonts, controls), SplitMix64, Feedback, debug driver
 └── Resources/    Assets.xcassets, Localizable.xcstrings, Fonts/
-Tests/            66 tests across 8 suites
+Tests/            65 tests across 8 suites
 ```
 
-The engine layer (`Engine/`, `Art/`) is `nonisolated` and `Sendable` and knows
+The engine layer (`Engine/`) is `nonisolated` and `Sendable` and knows
 nothing about SwiftUI, which is what lets it be unit-tested directly and rendered
 on background threads. The project uses Swift 6 strict concurrency with
 `MainActor` default isolation.
@@ -402,7 +387,7 @@ resizing are handled by the same code path as rotation.
 
 ## Tests
 
-`Tests/` contains **66 tests in 8 suites** (Swift Testing), covering the areas the
+`Tests/` contains **65 tests in 8 suites** (Swift Testing), covering the areas the
 engine cannot be allowed to get wrong:
 
 grid selection · edge generation · edge matching between neighbours · flat
@@ -410,7 +395,7 @@ borders · closed, non-self-intersecting outlines · determinism from a seed ·
 coordinates · snap calculation and tolerance scaling · group merge · four-way
 bridging · group movement · completion detection · shuffle · scatter · the real
 clock · undo/redo · save/load and serialisation · image crop, resize and decode ·
-artwork determinism and local contrast · texture rendering and the memory budget ·
+texture rendering and the memory budget ·
 photo import, reload and deletion · viewport mapping, anchored zoom and the
 resize clamp · daily streaks, achievement unlocks and completion summaries.
 

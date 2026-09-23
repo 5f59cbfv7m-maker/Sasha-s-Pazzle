@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// The picture library: built-in generated art plus the user's own photos.
+/// The picture library: the bundled photographs plus the user's own photos.
 ///
 /// Photos are stored as optimised JPEG copies inside the app container and
 /// indexed by a small JSON manifest. Two deliberate choices:
