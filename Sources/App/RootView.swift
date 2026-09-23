@@ -2,7 +2,15 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSplash = true
+
+    /// The library tune while a picture is chosen (set-up included), the board
+    /// tune once the game is on screen, silence in the background.
+    private var music: Feedback.Music? {
+        guard scenePhase == .active else { return nil }
+        return model.path.last == .game ? .board : .library
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -62,6 +70,8 @@ struct RootView: View {
             .presentationSizing(.page)
         }
         .preferredColorScheme(model.settings.appearance.colorScheme)
+        .onChange(of: music, initial: true) { Feedback.shared.setMusic(music, settings: model.settings) }
+        .onChange(of: model.settings.musicEnabled) { Feedback.shared.setMusic(music, settings: model.settings) }
         .environment(model.settings)
         #if os(iOS)
         // Under memory pressure the derived-image caches are the cheapest thing

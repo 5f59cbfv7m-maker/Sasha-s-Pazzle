@@ -42,14 +42,8 @@ struct GameView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { session.handleBackground() }
-            Feedback.shared.setMusic(playing: phase == .active, settings: settings)
         }
-        .onChange(of: settings.musicEnabled) { Feedback.shared.setMusic(playing: true, settings: settings) }
-        .onAppear { Feedback.shared.setMusic(playing: true, settings: settings) }
-        .onDisappear {
-            session.saveNow()
-            Feedback.shared.setMusic(playing: false, settings: settings)
-        }
+        .onDisappear { session.saveNow() }
         .sheet(isPresented: $showOriginal) { OriginalImageSheet(session: session) }
     }
 

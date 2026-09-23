@@ -13,26 +13,32 @@ import UIKit
 ///
 /// A file in `Resources/Sounds/` named after a tone (`snap.m4a`, `merge.wav`,
 /// `complete.caf`…) is played as-is; a tone without a file is synthesised at
-/// launch from a handful of decaying sine partials. `music.*` loops while the
-/// board is on screen. If audio cannot start for any reason it simply stays
-/// off — a silent game is fine, a crashing one is not.
+/// launch from a handful of decaying sine partials. `music-library.*` loops
+/// while a picture is being chosen and `music.*` while the board is on screen,
+/// with a crossfade between them. If audio cannot start for any reason it
+/// simply stays off — a silent game is fine, a crashing one is not.
 @MainActor
 final class Feedback {
     static let shared = Feedback()
 
     enum Tone: String, CaseIterable { case snap, merge, complete }
+    enum Music: String, CaseIterable { case library = "music-library", board = "music" }
 
     /// Music relative to the effects; the file's own level does the rest.
     static let musicVolume: Float = 0.35
 
-    /// True when a `music.*` file ships, so Settings only offers what exists.
-    static let hasMusic = soundURL("music") != nil
+    /// Seconds for one track to fade into the other.
+    static let crossfade: TimeInterval = 2
+
+    /// True when a music file ships, so Settings only offers what exists.
+    static let hasMusic = Music.allCases.contains { soundURL($0.rawValue) != nil }
 
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private var buffers: [Tone: AVAudioPCMBuffer] = [:]
     private var filePlayers: [Tone: AVAudioPlayer] = [:]
-    private var music: AVAudioPlayer?
+    private var tracks: [Music: AVAudioPlayer] = [:]
+    private var currentMusic: Music?
     private var audioReady = false
 
     private init() {}
@@ -90,17 +96,30 @@ final class Feedback {
         player.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
     }
 
-    /// Starts or pauses the loop; call with `playing: true` whenever the board
-    /// appears or the setting changes, `false` when it leaves the screen.
-    func setMusic(playing: Bool, settings: AppSettings) {
-        guard playing, settings.musicEnabled else { music?.pause(); return }
+    /// Crossfades to `track`, or fades everything out with `nil`. Each loop
+    /// keeps its place while silent, so coming back resumes rather than restarts.
+    func setMusic(_ track: Music?, settings: AppSettings) {
+        let target = settings.musicEnabled ? track : nil
+        guard target != currentMusic else { return }
+        currentMusic = target
         prepareAudioIfNeeded()
-        if music == nil, let url = Self.soundURL("music"), let loop = try? AVAudioPlayer(contentsOf: url) {
-            loop.numberOfLoops = -1
-            loop.volume = Self.musicVolume
-            music = loop
+        for (music, player) in tracks where music != target {
+            player.setVolume(0, fadeDuration: Self.crossfade)
         }
-        music?.play()
+        Task {
+            try? await Task.sleep(for: .seconds(Self.crossfade))
+            for (music, player) in tracks where music != currentMusic { player.pause() }
+        }
+        guard let target else { return }
+        if tracks[target] == nil, let url = Self.soundURL(target.rawValue),
+           let loop = try? AVAudioPlayer(contentsOf: url) {
+            loop.numberOfLoops = -1
+            loop.volume = 0
+            tracks[target] = loop
+        }
+        guard let player = tracks[target] else { return }
+        if !player.isPlaying { player.play() }
+        player.setVolume(Self.musicVolume, fadeDuration: Self.crossfade)
     }
 
     private static func soundURL(_ name: String) -> URL? {

@@ -158,7 +158,10 @@ copied too (two of them collide with "multiple commands produce"). The
 `Pictures/` folder holds the 120 bundled photographs (credits in
 `docs/photo-credits.md`). `Sounds/` holds the effects made by
 `Scripts/make-sounds.swift` — CAF, not AAC, because AAC's encoder priming
-puts ~50 ms of silence in front of every tap. See `docs/app-store.md` §5–6.
+puts ~50 ms of silence in front of every tap — and the two music loops
+(`music-library` for the library, `music` for the board), which `RootView`
+picks from the navigation path and `Feedback.setMusic` crossfades. See
+`docs/app-store.md` §5–6.
 
 **Bundled picture titles are manual catalog keys.** `bundledItem(at:)` calls
 `String(localized:)` with the file name's title at runtime, so Xcode's string

@@ -1,13 +1,15 @@
 #!/usr/bin/env swift
 // Sound effects and a draft of the background music for Sasha's Puzzles.
 //
-//   swift Scripts/make-sounds.swift [outdir]      # default ~/Desktop/Sasha's Sounds
+//   swift Scripts/make-sounds.swift [outdir] [music | music-library …]
 //
+// Default outdir is ~/Desktop/Sasha's Sounds; naming tracks renders only those.
 // Effects come in variants (snap-A.caf …) to pick by ear; rename the chosen
 // ones to snap / merge / complete and drop them into Sources/Resources/Sounds/.
-// The music is written as MIDI (music.mid — open it in Logic and pick real
-// instruments) and rendered through the General MIDI bank built into macOS
-// (music-draft.m4a), folded so the end flows into the start without a seam.
+// Each music track (board: music, library: music-library) is written as MIDI
+// (open it in Logic and pick real instruments) and rendered through the General
+// MIDI bank built into macOS (<track>-draft.m4a), folded so the end flows into
+// the start without a seam; ship it as Sounds/<track>.m4a.
 import AVFoundation
 
 let home = FileManager.default.homeDirectoryForCurrentUser
@@ -232,52 +234,109 @@ try effect("complete-C (тёплый аккорд)", completeC)
 
 // MARK: - Music
 
-let bpm = 76.0, tpq = 480
-struct Chord { var root: Int; var minor = false; var seventh = false; var bass: Int? }
-let phraseA = [Chord(root: 5), Chord(root: 0, bass: 4), Chord(root: 2, minor: true), Chord(root: 9, minor: true),
-               Chord(root: 10), Chord(root: 5, bass: 9), Chord(root: 7, minor: true, seventh: true), Chord(root: 0)]
-let phraseB = [Chord(root: 10), Chord(root: 0), Chord(root: 9, minor: true), Chord(root: 2, minor: true),
-               Chord(root: 7, minor: true, seventh: true), Chord(root: 0, bass: 4), Chord(root: 5), Chord(root: 0, seventh: true)]
-let melodyA: [[(Int, Double)]] = [
-    [(72, 1.5), (69, 0.5), (65, 1), (69, 1)], [(67, 2), (64, 1), (67, 1)],
-    [(65, 1.5), (69, 0.5), (74, 2)], [(72, 4)],
-    [(74, 1.5), (72, 0.5), (70, 1), (74, 1)], [(72, 1.5), (69, 0.5), (65, 2)],
-    [(67, 1), (69, 1), (70, 1), (74, 1)], [(72, 3), (0, 1)]]
-let melodyB: [[(Int, Double)]] = [
-    [(77, 2), (74, 1), (70, 1)], [(76, 2), (72, 1), (67, 1)],
-    [(69, 1.5), (72, 0.5), (76, 2)], [(74, 3), (0, 1)],
-    [(70, 1), (74, 1), (77, 1), (74, 1)], [(72, 1.5), (70, 0.5), (67, 2)],
-    [(69, 2), (67, 1), (65, 1)], [(67, 2), (0, 2)]]
-// Two passes; the second plays the first phrase an octave up and softer.
-let chords = phraseA + phraseB + phraseA + phraseB
-let melody = melodyA + melodyB + melodyA.map { $0.map { ($0.0 == 0 ? 0 : $0.0 + 12, $0.1) } } + melodyB
-let beats = Double(chords.count * 4)
-
+/// One looping track: its notes (in beats), the tempo and metre, and which
+/// General MIDI programs play each part in the draft render.
 struct Note { var track: Int; var pitch: Int; var start: Double; var length: Double; var velocity: Int }
-var notes: [Note] = []
-for (bar, chord) in chords.enumerated() {
-    let t0 = Double(bar * 4)
-    let third = chord.minor ? 3 : 4
-    var base = 36 + chord.root; if base < 41 { base += 12 }
-    var bass = 24 + (chord.bass ?? chord.root); if bass < 29 { bass += 12 }
-    let top = chord.seventh ? base + 22 : base + 19
-    // Piano: a rolling eighth-note figure, each note held to the bar line like a pedal.
-    for (i, pitch) in [bass, base + 7, base + 12, base + 12 + third, top, base + 12 + third, base + 12, base + 7].enumerated() {
-        let start = t0 + Double(i) * 0.5
-        notes.append(Note(track: 1, pitch: pitch, start: start, length: t0 + 4 - start,
-                          velocity: i == 0 ? 52 : 40 + (i % 3) * 3))
-    }
-    notes.append(contentsOf: [base + 12, base + 12 + third, base + 19].map {
-        Note(track: 2, pitch: $0, start: t0, length: 4, velocity: 34) })
-    var t = t0
-    let soft = (16..<24).contains(bar)
-    for (pitch, length) in melody[bar] {
-        if pitch > 0 {
-            notes.append(Note(track: 0, pitch: pitch, start: t, length: length * 0.95,
-                              velocity: (soft ? 52 : 68) + Int(noise() * 5)))
+struct Piece {
+    var stem: String
+    var bpm: Double
+    var beatsPerBar: Int
+    var bars: Int
+    var parts: [(name: String, program: Int)]
+    var reverb: AVAudioUnitReverbPreset
+    var wet: Float
+    var notes: [Note]
+}
+
+// Board: F major, 76 BPM, vibraphone over a rolling piano — warm and moving.
+func boardPiece() -> Piece {
+    struct Chord { var root: Int; var minor = false; var seventh = false; var bass: Int? }
+    let phraseA = [Chord(root: 5), Chord(root: 0, bass: 4), Chord(root: 2, minor: true), Chord(root: 9, minor: true),
+                   Chord(root: 10), Chord(root: 5, bass: 9), Chord(root: 7, minor: true, seventh: true), Chord(root: 0)]
+    let phraseB = [Chord(root: 10), Chord(root: 0), Chord(root: 9, minor: true), Chord(root: 2, minor: true),
+                   Chord(root: 7, minor: true, seventh: true), Chord(root: 0, bass: 4), Chord(root: 5), Chord(root: 0, seventh: true)]
+    let melodyA: [[(Int, Double)]] = [
+        [(72, 1.5), (69, 0.5), (65, 1), (69, 1)], [(67, 2), (64, 1), (67, 1)],
+        [(65, 1.5), (69, 0.5), (74, 2)], [(72, 4)],
+        [(74, 1.5), (72, 0.5), (70, 1), (74, 1)], [(72, 1.5), (69, 0.5), (65, 2)],
+        [(67, 1), (69, 1), (70, 1), (74, 1)], [(72, 3), (0, 1)]]
+    let melodyB: [[(Int, Double)]] = [
+        [(77, 2), (74, 1), (70, 1)], [(76, 2), (72, 1), (67, 1)],
+        [(69, 1.5), (72, 0.5), (76, 2)], [(74, 3), (0, 1)],
+        [(70, 1), (74, 1), (77, 1), (74, 1)], [(72, 1.5), (70, 0.5), (67, 2)],
+        [(69, 2), (67, 1), (65, 1)], [(67, 2), (0, 2)]]
+    // Two passes; the second plays the first phrase an octave up and softer.
+    let chords = phraseA + phraseB + phraseA + phraseB
+    let melody = melodyA + melodyB + melodyA.map { $0.map { ($0.0 == 0 ? 0 : $0.0 + 12, $0.1) } } + melodyB
+
+    var notes: [Note] = []
+    for (bar, chord) in chords.enumerated() {
+        let t0 = Double(bar * 4)
+        let third = chord.minor ? 3 : 4
+        var base = 36 + chord.root; if base < 41 { base += 12 }
+        var bass = 24 + (chord.bass ?? chord.root); if bass < 29 { bass += 12 }
+        let top = chord.seventh ? base + 22 : base + 19
+        // Piano: a rolling eighth-note figure, each note held to the bar line like a pedal.
+        for (i, pitch) in [bass, base + 7, base + 12, base + 12 + third, top, base + 12 + third, base + 12, base + 7].enumerated() {
+            let start = t0 + Double(i) * 0.5
+            notes.append(Note(track: 1, pitch: pitch, start: start, length: t0 + 4 - start,
+                              velocity: i == 0 ? 52 : 40 + (i % 3) * 3))
         }
-        t += length
+        notes.append(contentsOf: [base + 12, base + 12 + third, base + 19].map {
+            Note(track: 2, pitch: $0, start: t0, length: 4, velocity: 34) })
+        var t = t0
+        let soft = (16..<24).contains(bar)
+        for (pitch, length) in melody[bar] {
+            if pitch > 0 {
+                notes.append(Note(track: 0, pitch: pitch, start: t, length: length * 0.95,
+                                  velocity: (soft ? 52 : 68) + Int(noise() * 5)))
+            }
+            t += length
+        }
     }
+    return Piece(stem: "music", bpm: 76, beatsPerBar: 4, bars: chords.count,
+                 parts: [("Melody (vibraphone)", 11), ("Piano", 0), ("Pad", 89)],
+                 reverb: .mediumHall, wet: 22, notes: notes)
+}
+
+// Library: D major, 60 BPM in 3/4, a slow piano in the manner of a
+// Gymnopédie — a low bass on one, a quiet chord on two, a few long melody
+// notes and a lot of air. Calm and thoughtful while a picture is chosen.
+func libraryPiece() -> Piece {
+    // (bass, chord) as MIDI notes, voiced by hand.
+    let dMaj7 = (38, [54, 57, 61]), gMaj7 = (43, [54, 59, 62]), bm7 = (35, [54, 57, 62])
+    let em7 = (40, [55, 59, 62]), a7sus = (33, [55, 62, 64]), asus = (33, [57, 62, 64])
+    let fsm7 = (42, [57, 61, 64]), dOverFs = (42, [57, 61, 66])
+    let phraseA = [dMaj7, gMaj7, bm7, gMaj7, em7, a7sus, dMaj7, asus]
+    let phraseB = [gMaj7, fsm7, em7, dOverFs, gMaj7, bm7, em7, a7sus]
+    let melodyA: [[(Int, Double)]] = [
+        [(0, 1), (78, 1), (81, 1)], [(78, 2), (74, 1)], [(76, 3)], [(0, 1), (74, 1), (71, 1)],
+        [(74, 2), (76, 1)], [(74, 3)], [(0, 1), (73, 1), (69, 1)], [(71, 2), (69, 1)]]
+    let melodyB: [[(Int, Double)]] = [
+        [(0, 1), (83, 1), (81, 1)], [(81, 2), (76, 1)], [(79, 3)], [(0, 1), (78, 1), (74, 1)],
+        [(76, 1), (78, 1), (79, 1)], [(78, 3)], [(0, 1), (76, 1), (74, 1)], [(76, 3)]]
+    let chords = phraseA + phraseB + phraseA + phraseB
+    let melody = melodyA + melodyB + melodyA.map { $0.map { ($0.0 == 0 ? 0 : $0.0 + 12, $0.1) } } + melodyB
+
+    var notes: [Note] = []
+    for (bar, (bass, chord)) in chords.enumerated() {
+        let t0 = Double(bar * 3)
+        notes.append(Note(track: 1, pitch: bass, start: t0, length: 3, velocity: 46))
+        notes.append(contentsOf: chord.map { Note(track: 1, pitch: $0, start: t0 + 1, length: 2, velocity: 32) })
+        notes.append(contentsOf: (chord + [bass + 24]).map { Note(track: 2, pitch: $0, start: t0, length: 3, velocity: 24) })
+        var t = t0
+        let soft = (16..<24).contains(bar)
+        for (pitch, length) in melody[bar] {
+            if pitch > 0 {
+                notes.append(Note(track: 0, pitch: pitch, start: t, length: length * 0.98,
+                                  velocity: (soft ? 44 : 58) + Int(noise() * 4)))
+            }
+            t += length
+        }
+    }
+    return Piece(stem: "music-library", bpm: 60, beatsPerBar: 3, bars: chords.count,
+                 parts: [("Melody (piano)", 0), ("Piano", 0), ("Pad", 89)],
+                 reverb: .largeHall, wet: 32, notes: notes)
 }
 
 // MIDI file for Logic: a conductor track and one track per part.
@@ -298,85 +357,100 @@ func chunk(_ name: String, _ events: [(tick: Int, off: Bool, bytes: [UInt8])]) -
     data += [0, 0xFF, 0x2F, 0]
     return Array("MTrk".utf8) + be(data.count, 4) + data
 }
-let names = ["Melody (vibraphone)", "Piano", "Pad"]
-var midi = Array("MThd".utf8) + be(6, 4) + be(1, 2) + be(names.count + 1, 2) + be(tpq, 2)
-midi += chunk("Sasha's Puzzles", [(0, false, [0xFF, 0x51, 0x03] + be(Int(60_000_000 / bpm), 3)),
-                                  (0, false, [0xFF, 0x58, 0x04, 4, 2, 24, 8])])
-for (track, name) in names.enumerated() {
-    var events: [(tick: Int, off: Bool, bytes: [UInt8])] = []
-    for n in notes where n.track == track {
-        let on: [UInt8] = [UInt8(0x90 | track), UInt8(n.pitch), UInt8(n.velocity)]
-        let off: [UInt8] = [UInt8(0x80 | track), UInt8(n.pitch), 0]
-        events.append((Int(n.start * Double(tpq)), false, on))
-        events.append((Int((n.start + n.length) * Double(tpq)), true, off))
+
+func writeMIDI(_ piece: Piece) throws {
+    let tpq = 480
+    var midi = Array("MThd".utf8) + be(6, 4) + be(1, 2) + be(piece.parts.count + 1, 2) + be(tpq, 2)
+    midi += chunk("Sasha's Puzzles", [(0, false, [0xFF, 0x51, 0x03] + be(Int(60_000_000 / piece.bpm), 3)),
+                                      (0, false, [0xFF, 0x58, 0x04, UInt8(piece.beatsPerBar), 2, 24, 8])])
+    for (track, part) in piece.parts.enumerated() {
+        var events: [(tick: Int, off: Bool, bytes: [UInt8])] = []
+        for n in piece.notes where n.track == track {
+            let on: [UInt8] = [UInt8(0x90 | track), UInt8(n.pitch), UInt8(n.velocity)]
+            let off: [UInt8] = [UInt8(0x80 | track), UInt8(n.pitch), 0]
+            events.append((Int(n.start * Double(tpq)), false, on))
+            events.append((Int((n.start + n.length) * Double(tpq)), true, off))
+        }
+        midi += chunk(part.name, events)
     }
-    midi += chunk(name, events)
+    try Data(midi).write(to: out.appending(path: "\(piece.stem).mid"))
+    print("\(piece.stem).mid")
 }
-try Data(midi).write(to: out.appending(path: "music.mid"))
-print("music.mid")
 
 // Draft render: General MIDI bank, notes fired block by block (1.5 ms blocks).
-let engine = AVAudioEngine()
-let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2)!
-try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 64)
-let bank = URL(fileURLWithPath: "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls")
-let samplers = [11, 0, 89].map { program -> AVAudioUnitSampler in   // vibraphone, grand piano, warm pad
-    let s = AVAudioUnitSampler()
-    engine.attach(s)
-    engine.connect(s, to: engine.mainMixerNode, format: format)
-    try! s.loadSoundBankInstrument(at: bank, program: UInt8(program),
-                                   bankMSB: UInt8(kAUSampler_DefaultMelodicBankMSB), bankLSB: UInt8(kAUSampler_DefaultBankLSB))
-    return s
-}
-let room = AVAudioUnitReverb()
-room.loadFactoryPreset(.mediumHall); room.wetDryMix = 22
-engine.attach(room)
-engine.connect(engine.mainMixerNode, to: room, format: format)
-engine.connect(room, to: engine.outputNode, format: format)
-try engine.start()
-
-let secondsPerBeat = 60 / bpm
-let loopFrames = Int(beats * secondsPerBeat * rate), tailFrames = Int(5 * rate)
-var events = notes.flatMap { n in
-    [(frame: Int(n.start * secondsPerBeat * rate), on: true, n), (frame: Int((n.start + n.length) * secondsPerBeat * rate), on: false, n)]
-}.sorted { ($0.frame, $0.on ? 1 : 0) < ($1.frame, $1.on ? 1 : 0) }
-var left: [Float] = [], right: [Float] = []
-let block = AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: 64)!
-var frame = 0, next = 0
-while frame < loopFrames + tailFrames {
-    while next < events.count, events[next].frame < frame + 64 {
-        let e = events[next]
-        if e.on { samplers[e.2.track].startNote(UInt8(e.2.pitch), withVelocity: UInt8(e.2.velocity), onChannel: 0) }
-        else { samplers[e.2.track].stopNote(UInt8(e.2.pitch), onChannel: 0) }
-        next += 1
+func renderDraft(_ piece: Piece) throws {
+    let engine = AVAudioEngine()
+    let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2)!
+    try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 64)
+    let bank = URL(fileURLWithPath: "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls")
+    let samplers = piece.parts.map { part -> AVAudioUnitSampler in
+        let s = AVAudioUnitSampler()
+        engine.attach(s)
+        engine.connect(s, to: engine.mainMixerNode, format: format)
+        try! s.loadSoundBankInstrument(at: bank, program: UInt8(part.program),
+                                       bankMSB: UInt8(kAUSampler_DefaultMelodicBankMSB), bankLSB: UInt8(kAUSampler_DefaultBankLSB))
+        return s
     }
-    guard try engine.renderOffline(64, to: block) == .success else { fatalError("render failed") }
-    left += UnsafeBufferPointer(start: block.floatChannelData![0], count: Int(block.frameLength))
-    right += UnsafeBufferPointer(start: block.floatChannelData![1], count: Int(block.frameLength))
-    frame += Int(block.frameLength)
-}
-// Fold the release of the last bar onto the first so the loop has no seam.
-for i in 0..<tailFrames { left[i] += left[loopFrames + i]; right[i] += right[loopFrames + i] }
-left.removeLast(left.count - loopFrames); right.removeLast(right.count - loopFrames)
-let peak = max(left.map(abs).max()!, right.map(abs).max()!)
-guard peak > 0.001 else { fatalError("music rendered silent") }
-let gain = 0.89 / peak   // -1 dBFS
-left = left.map { $0 * gain }; right = right.map { $0 * gain }
+    let room = AVAudioUnitReverb()
+    room.loadFactoryPreset(piece.reverb); room.wetDryMix = piece.wet
+    engine.attach(room)
+    engine.connect(engine.mainMixerNode, to: room, format: format)
+    engine.connect(room, to: engine.outputNode, format: format)
+    try engine.start()
 
-let wav = out.appending(path: "music-draft.wav")
-try write([left, right], to: wav, settings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: rate,
-                                             AVNumberOfChannelsKey: 2, AVLinearPCMBitDepthKey: 16,
-                                             AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false])
-let m4a = out.appending(path: "music-draft.m4a")
-try? FileManager.default.removeItem(at: m4a)
-let convert = Process()
-convert.executableURL = URL(fileURLWithPath: "/usr/bin/afconvert")
-convert.arguments = ["-f", "m4af", "-d", "aac", "-b", "160000", wav.path, m4a.path]
-try convert.run(); convert.waitUntilExit()
-try FileManager.default.removeItem(at: wav)
-// Loudness by 10-second stretch, as a sanity check nobody has to listen for.
-let rms = stride(from: 0, to: loopFrames, by: Int(10 * rate)).map { start -> String in
-    let slice = left[start..<min(loopFrames, start + Int(10 * rate))]
-    return String(format: "%.0f", 20 * log10(sqrt(slice.reduce(0) { $0 + Double($1 * $1) } / Double(slice.count))))
+    let secondsPerBeat = 60 / piece.bpm
+    let loopFrames = Int(Double(piece.bars * piece.beatsPerBar) * secondsPerBeat * rate), tailFrames = Int(6 * rate)
+    var events: [(frame: Int, on: Bool, note: Note)] = []
+    for n in piece.notes {
+        events.append((Int(n.start * secondsPerBeat * rate), true, n))
+        events.append((Int((n.start + n.length) * secondsPerBeat * rate), false, n))
+    }
+    events.sort { ($0.frame, $0.on ? 1 : 0) < ($1.frame, $1.on ? 1 : 0) }
+    var left: [Float] = [], right: [Float] = []
+    let block = AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: 64)!
+    var frame = 0, next = 0
+    while frame < loopFrames + tailFrames {
+        while next < events.count, events[next].frame < frame + 64 {
+            let e = events[next]
+            if e.on { samplers[e.note.track].startNote(UInt8(e.note.pitch), withVelocity: UInt8(e.note.velocity), onChannel: 0) }
+            else { samplers[e.note.track].stopNote(UInt8(e.note.pitch), onChannel: 0) }
+            next += 1
+        }
+        guard try engine.renderOffline(64, to: block) == .success else { fatalError("render failed") }
+        left += UnsafeBufferPointer(start: block.floatChannelData![0], count: Int(block.frameLength))
+        right += UnsafeBufferPointer(start: block.floatChannelData![1], count: Int(block.frameLength))
+        frame += Int(block.frameLength)
+    }
+    // Fold the release of the last bar onto the first so the loop has no seam.
+    for i in 0..<tailFrames { left[i] += left[loopFrames + i]; right[i] += right[loopFrames + i] }
+    left.removeLast(left.count - loopFrames); right.removeLast(right.count - loopFrames)
+    let peak = max(left.map(abs).max()!, right.map(abs).max()!)
+    guard peak > 0.001 else { fatalError("\(piece.stem) rendered silent") }
+    let gain = 0.89 / peak   // -1 dBFS
+    left = left.map { $0 * gain }; right = right.map { $0 * gain }
+
+    let wav = out.appending(path: "\(piece.stem)-draft.wav")
+    try write([left, right], to: wav, settings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: rate,
+                                                 AVNumberOfChannelsKey: 2, AVLinearPCMBitDepthKey: 16,
+                                                 AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false])
+    let m4a = out.appending(path: "\(piece.stem)-draft.m4a")
+    try? FileManager.default.removeItem(at: m4a)
+    let convert = Process()
+    convert.executableURL = URL(fileURLWithPath: "/usr/bin/afconvert")
+    convert.arguments = ["-f", "m4af", "-d", "aac", "-b", "160000", wav.path, m4a.path]
+    try convert.run(); convert.waitUntilExit()
+    try FileManager.default.removeItem(at: wav)
+    // Loudness by 10-second stretch, as a sanity check nobody has to listen for.
+    let rms = stride(from: 0, to: loopFrames, by: Int(10 * rate)).map { start -> String in
+        let slice = left[start..<min(loopFrames, start + Int(10 * rate))]
+        return String(format: "%.0f", 20 * log10(sqrt(slice.reduce(0) { $0 + Double($1 * $1) } / Double(slice.count))))
+    }
+    print("\(piece.stem)-draft.m4a  \(String(format: "%.0f", Double(loopFrames) / rate)) s, RMS dB per 10 s: \(rms.joined(separator: " "))")
 }
-print("music-draft.m4a  \(String(format: "%.0f", Double(loopFrames) / rate)) s, RMS dB per 10 s: \(rms.joined(separator: " "))")
+
+// Only the pieces named on the command line after the directory, or both.
+let wanted = Set(CommandLine.arguments.dropFirst(2))
+for piece in [boardPiece(), libraryPiece()] where wanted.isEmpty || wanted.contains(piece.stem) {
+    try writeMIDI(piece)
+    try renderDraft(piece)
+}
