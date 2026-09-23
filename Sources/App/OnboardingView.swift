@@ -26,9 +26,13 @@ struct OnboardingView: View {
                     .padding(30)
                 VStack(alignment: .leading, spacing: 10) {
                     Tag(text: String(localized: "Step \(step + 1) of \(Self.steps.count)"))
+                    // The illustration above takes all spare height; without
+                    // this a two-line title ("Ваши снимки — тоже пазлы") is cut to one.
                     Text(Self.steps[step].title).font(Theme.display(30)).padding(.top, 4)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(Self.steps[step].text)
                         .font(Theme.body(16)).foregroundStyle(Theme.muted).lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 10) {
                         ForEach(0..<Self.steps.count, id: \.self) { index in
                             Capsule().fill(index == step ? Theme.accent : Theme.track)
