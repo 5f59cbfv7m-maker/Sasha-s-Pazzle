@@ -14,7 +14,8 @@ import UIKit
 /// A file in `Resources/Sounds/` named after a tone (`snap.m4a`, `merge.wav`,
 /// `complete.caf`…) is played as-is; a tone without a file is synthesised at
 /// launch from a handful of decaying sine partials. `music-library.*` loops
-/// while a picture is being chosen and `music.*` while the board is on screen,
+/// while a picture is being chosen and the board tune the player picked
+/// (`music-piano.*` or `music.*`) while the board is on screen,
 /// with a crossfade between them. If audio cannot start for any reason it
 /// simply stays off — a silent game is fine, a crashing one is not.
 @MainActor
@@ -22,7 +23,7 @@ final class Feedback {
     static let shared = Feedback()
 
     enum Tone: String, CaseIterable { case snap, merge, complete }
-    enum Music: String, CaseIterable { case library = "music-library", board = "music" }
+    enum Music: String, CaseIterable { case library = "music-library", boardPiano = "music-piano", board = "music" }
 
     /// Music relative to the effects; the file's own level does the rest.
     static let musicVolume: Float = 0.35

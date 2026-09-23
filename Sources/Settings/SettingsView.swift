@@ -31,6 +31,14 @@ struct SettingsView: View {
                         toggle("Sounds", $settings.soundEnabled)
                         if Feedback.hasMusic {
                             toggle("Background music", $settings.musicEnabled)
+                            if settings.musicEnabled {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Music at the table").font(Theme.body(16))
+                                    PillSegments(options: AppSettings.BoardMusic.allCases,
+                                                 selection: $settings.boardMusic, title: { $0.title }, expand: true)
+                                }
+                                .padding(EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14))
+                            }
                         }
                         #if os(iOS)
                         toggle("Haptic feedback", $settings.hapticsEnabled)

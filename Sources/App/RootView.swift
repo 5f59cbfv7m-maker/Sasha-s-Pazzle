@@ -9,7 +9,7 @@ struct RootView: View {
     /// tune once the game is on screen, silence in the background.
     private var music: Feedback.Music? {
         guard scenePhase == .active else { return nil }
-        return model.path.last == .game ? .board : .library
+        return model.path.last == .game ? model.settings.boardMusic.track : .library
     }
 
     var body: some View {

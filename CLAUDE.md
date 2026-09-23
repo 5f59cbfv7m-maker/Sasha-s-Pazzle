@@ -159,7 +159,8 @@ copied too (two of them collide with "multiple commands produce"). The
 `docs/photo-credits.md`). `Sounds/` holds the effects made by
 `Scripts/make-sounds.swift` — CAF, not AAC, because AAC's encoder priming
 puts ~50 ms of silence in front of every tap — and the two music loops
-(`music-library` for the library, `music` for the board), which `RootView`
+(`music-library` for the library; `music-piano` or `music` on the board, per
+`AppSettings.boardMusic`), which `RootView`
 picks from the navigation path and `Feedback.setMusic` crossfades. See
 `docs/app-store.md` §5–6.
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env swift
 // Sound effects and a draft of the background music for Sasha's Puzzles.
 //
-//   swift Scripts/make-sounds.swift [outdir] [music | music-library …]
+//   swift Scripts/make-sounds.swift [outdir] [music | music-piano | music-library …]
 //
 // Default outdir is ~/Desktop/Sasha's Sounds; naming tracks renders only those.
 // Effects come in variants (snap-A.caf …) to pick by ear; rename the chosen
 // ones to snap / merge / complete and drop them into Sources/Resources/Sounds/.
-// Each music track (board: music, library: music-library) is written as MIDI
+// Each music track (board: music and music-piano, library: music-library) is written as MIDI
 // (open it in Logic and pick real instruments) and rendered through the General
 // MIDI bank built into macOS (<track>-draft.m4a), folded so the end flows into
 // the start without a seam; ship it as Sounds/<track>.m4a.
@@ -339,6 +339,54 @@ func libraryPiece() -> Piece {
                  reverb: .largeHall, wet: 32, notes: notes)
 }
 
+// Board, piano: the library's language with a little more motion for play —
+// G major, 66 BPM in 3/4, the left hand rolling the chord in eighths under a
+// sparse melody. Five phrases (A B C A' B') so a long session hears a bridge.
+func boardPianoPiece() -> Piece {
+    let gMaj7 = (43, [54, 59, 62]), cMaj7 = (36, [55, 59, 64]), em7 = (40, [55, 59, 62])
+    let am7 = (33, [55, 60, 64]), d7sus = (38, [55, 57, 60]), d = (38, [54, 57, 62])
+    let bm7 = (35, [54, 57, 62]), cAdd9 = (36, [55, 62, 64]), em9 = (40, [55, 59, 66])
+    let phraseA = [gMaj7, cMaj7, gMaj7, cMaj7, em7, am7, d7sus, d]
+    let phraseB = [cMaj7, bm7, am7, gMaj7, cAdd9, em9, am7, d7sus]
+    let phraseC = [em7, bm7, cMaj7, gMaj7, am7, em7, cAdd9, d7sus]
+    let melodyA: [[(Int, Double)]] = [
+        [(74, 2), (78, 1)], [(79, 2), (76, 1)], [(74, 3)], [(0, 1), (71, 1), (72, 1)],
+        [(74, 1.5), (71, 0.5), (67, 1)], [(72, 3)], [(0, 1), (69, 1), (72, 1)], [(69, 3)]]
+    let melodyB: [[(Int, Double)]] = [
+        [(76, 2), (79, 1)], [(78, 3)], [(76, 1), (72, 1), (76, 1)], [(74, 3)],
+        [(0, 1), (74, 1), (76, 1)], [(78, 2), (79, 1)], [(81, 1.5), (79, 0.5), (76, 1)], [(74, 3)]]
+    let melodyC: [[(Int, Double)]] = [
+        [(0, 1), (71, 1), (74, 1)], [(78, 2), (74, 1)], [(76, 3)], [(0, 1), (79, 1), (78, 1)],
+        [(76, 2), (72, 1)], [(71, 3)], [(0, 1), (74, 1), (76, 1)], [(72, 2), (69, 1)]]
+    let chords = phraseA + phraseB + phraseC + phraseA + phraseB
+    let melody = melodyA + melodyB + melodyC + melodyA.map { $0.map { ($0.0 == 0 ? 0 : $0.0 + 12, $0.1) } } + melodyB
+
+    var notes: [Note] = []
+    for (bar, (bass, chord)) in chords.enumerated() {
+        let t0 = Double(bar * 3)
+        notes.append(Note(track: 1, pitch: bass, start: t0, length: 3, velocity: 44))
+        // Up and back down the chord, each note held to the bar line like a pedal.
+        for (i, pitch) in [chord[0], chord[1], chord[2], chord[1], chord[0]].enumerated() {
+            let start = t0 + 0.5 + Double(i) * 0.5
+            notes.append(Note(track: 1, pitch: pitch, start: start, length: t0 + 3 - start,
+                              velocity: 30 + (i == 2 ? 4 : 0)))
+        }
+        notes.append(contentsOf: (chord + [bass + 24]).map { Note(track: 2, pitch: $0, start: t0, length: 3, velocity: 22) })
+        var t = t0
+        let soft = (24..<32).contains(bar)
+        for (pitch, length) in melody[bar] {
+            if pitch > 0 {
+                notes.append(Note(track: 0, pitch: pitch, start: t, length: length * 0.98,
+                                  velocity: (soft ? 44 : 58) + Int(noise() * 4)))
+            }
+            t += length
+        }
+    }
+    return Piece(stem: "music-piano", bpm: 66, beatsPerBar: 3, bars: chords.count,
+                 parts: [("Melody (piano)", 0), ("Piano", 0), ("Pad", 89)],
+                 reverb: .largeHall, wet: 30, notes: notes)
+}
+
 // MIDI file for Logic: a conductor track and one track per part.
 func vlq(_ value: Int) -> [UInt8] {
     var v = value, bytes = [UInt8(v & 0x7F)]
@@ -450,7 +498,7 @@ func renderDraft(_ piece: Piece) throws {
 
 // Only the pieces named on the command line after the directory, or both.
 let wanted = Set(CommandLine.arguments.dropFirst(2))
-for piece in [boardPiece(), libraryPiece()] where wanted.isEmpty || wanted.contains(piece.stem) {
+for piece in [boardPiece(), boardPianoPiece(), libraryPiece()] where wanted.isEmpty || wanted.contains(piece.stem) {
     try writeMIDI(piece)
     try renderDraft(piece)
 }

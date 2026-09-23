@@ -25,9 +25,23 @@ final class AppSettings {
         }
     }
 
+    /// The tune under the board; the library always plays its own.
+    enum BoardMusic: String, CaseIterable, Identifiable, Sendable {
+        case piano, vibraphone
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .piano: String(localized: "Piano")
+            case .vibraphone: String(localized: "Vibraphone")
+            }
+        }
+        var track: Feedback.Music { self == .piano ? .boardPiano : .board }
+    }
+
     var appearance: Appearance { didSet { write(appearance.rawValue, "appearance") } }
     var soundEnabled: Bool { didSet { write(soundEnabled, "sound") } }
     var musicEnabled: Bool { didSet { write(musicEnabled, "music") } }
+    var boardMusic: BoardMusic { didSet { write(boardMusic.rawValue, "boardMusic") } }
     var hapticsEnabled: Bool { didSet { write(hapticsEnabled, "haptics") } }
     /// Faint copy of the picture under the board — a guide, not a solution.
     var showGhostImage: Bool { didSet { write(showGhostImage, "ghost") } }
@@ -45,6 +59,7 @@ final class AppSettings {
         appearance = Appearance(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         soundEnabled = defaults.object(forKey: "sound") as? Bool ?? true
         musicEnabled = defaults.object(forKey: "music") as? Bool ?? true
+        boardMusic = BoardMusic(rawValue: defaults.string(forKey: "boardMusic") ?? "") ?? .piano
         hapticsEnabled = defaults.object(forKey: "haptics") as? Bool ?? true
         showGhostImage = defaults.object(forKey: "ghost") as? Bool ?? true
         snapAssist = SnapAssist(rawValue: defaults.string(forKey: "snapAssist") ?? "") ?? .standard
