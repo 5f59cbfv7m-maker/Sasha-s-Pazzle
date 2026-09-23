@@ -215,14 +215,16 @@ There is no way to read back a live SwiftUI window — `cacheDisplay` and
   `completed`, `huge`, `hugeSolved`. `--tray-trailing` forces the landscape
   layout on a portrait simulator (there is no `simctl` rotate); add
   `-AppleLanguages "(en)" -onboarding YES -appearance light` to pin the rest.
-  On the Mac, `--window-size 1440x900` sets the window in points. A stage run
+  On the Mac a stage run sizes the window to 1440×900 pt. Any stage run also
   lives in `StageSandbox`: a scratch data directory and a throwaway defaults
   domain, so `--clear-saves` and the `dark` stage never touch the player's
-  real saves or settings (the Mac debug build shares the release container).
+  real saves or settings, even from a debug build that shares the release
+  container.
 - **Store screenshots**: `Scripts/store-screenshots.sh [lang]` walks the stages
-  on the iPhone 17 Pro Max and iPad Pro 13" simulators, and
-  `Scripts/mac-screenshots.sh [lang]` captures a 2880×1800 Mac window, into
-  `docs/store/<lang>/`, numbered in upload order.
+  on the iPhone 17 Pro Max and iPad Pro 13" simulators and the Mac app into
+  `docs/store/<lang>/`, numbered in upload order. The Mac build uses bundle
+  ID `…SashasPazzle.screenshots` so `--clear-saves` never touches the family's
+  real container; `SIMULATORS=` (empty) shoots the Mac only.
 - **Screenshots**: on macOS capture the window only (find its number via
   `CGWindowListCopyWindowInfo`, then `screencapture -o -l <id>`) — a full-screen
   grab exposes the user's desktop. On iOS use `xcrun simctl io <device> screenshot`.

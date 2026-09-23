@@ -81,9 +81,9 @@ App Store Connect в 2026 году требует только два разме
 
 | Устройство | Пиксели | Откуда |
 |---|---|---|
-| iPhone 6.9" | 1320 × 2868 (портрет) | `Scripts/store-screenshots.sh`, симулятор iPhone 17 Pro Max |
-| iPad 13" | 2064 × 2752 (портрет) | тот же скрипт, iPad Pro 13-inch (M5) |
-| Mac | 2880 × 1800 (или 2560 × 1600) | `Scripts/mac-screenshots.sh`, Retina-дисплей |
+| iPhone 6.9" | 1320 × 2868 (портрет) | симулятор iPhone 17 Pro Max |
+| iPad 13" | 2064 × 2752 (портрет) | симулятор iPad Pro 13-inch (M5) |
+| Mac | 1440 × 900 (2880 × 1800 на Retina-экране) | окно Mac-версии на этом Mac |
 
 До 10 штук на устройство, PNG или JPEG. Первые три видны в поиске, поэтому
 файлы пронумерованы в порядке загрузки: `1-hint` (пазл наполовину собран),
@@ -93,19 +93,19 @@ Store Connect выделите в Finder все файлы папки и пер�
 намеренно.
 
 ```bash
-Scripts/store-screenshots.sh ru      # → docs/store/ru/<iPhone|iPad>/
-Scripts/mac-screenshots.sh ru        # → docs/store/ru/Mac/
-for l in en ru de fr es it pt-BR ja ko zh-Hans; do
-  Scripts/store-screenshots.sh $l && Scripts/mac-screenshots.sh $l
-done
+Scripts/store-screenshots.sh ru              # → docs/store/ru/<iPhone|iPad|Mac>/
+SIMULATORS= Scripts/store-screenshots.sh ru  # только Mac
+for l in en ru de fr es it pt-BR ja ko zh-Hans; do Scripts/store-screenshots.sh $l; done
 ```
 
-Скрипты запускают отладочную сборку со `--stage`; в этом режиме приложение
-хранит сохранения, фото, статистику и настройки в отдельной временной папке
-(`StageSandbox`), так что ваши собственные игры на Mac и в симуляторе не
-трогаются. Мак-скрипту при первом запуске нужно разрешение «Запись экрана»
-для Терминала (Системные настройки → Конфиденциальность и безопасность);
-перед съёмкой он закрывает запущенную копию приложения.
+Снимайте после замены картинок, а не до. Скрипт запускает отладочную сборку
+со `--stage`; в этом режиме приложение держит сохранения, фото, статистику и
+настройки в отдельной временной папке (`StageSandbox`), а Mac-сборка ещё и
+идёт под своим bundle ID (`…SashasPazzle.screenshots`), так что ваши игры и
+фото на этом Mac и в симуляторах не трогаются. Окно Mac — 1440 × 900 pt: на
+обычном мониторе это 1440 × 900 px, на Retina — 2880 × 1800, оба размера App
+Store принимает. При первом запуске macOS спросит разрешение «Запись экрана»
+для Терминала.
 
 Рамки устройств не нужны; если хочется подписи поверх, любой редактор
 подойдёт, размер холста менять нельзя.
