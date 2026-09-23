@@ -71,11 +71,6 @@ nonisolated enum ArtRenderer {
         (max(64, Int(rect.width / divisor)), max(64, Int(rect.height / divisor)))
     }
 
-    /// Normalised position with `0` at the top, matching palette orientation.
-    private static func topDown(_ y: CGFloat, _ rect: CGRect) -> Double {
-        Double(1 - (y - rect.minY) / max(1, rect.height))
-    }
-
     private static func starField(_ context: CGContext, _ rect: CGRect,
                                   _ rng: inout SplitMix64, density: CGFloat = 1) {
         let count = Int(rect.width * rect.height / 5200 * density)
