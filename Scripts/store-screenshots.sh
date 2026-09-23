@@ -16,7 +16,10 @@ DD="${TMPDIR:-/tmp}/sashas-puzzles-screenshots"
 BUNDLE=com.kirillrychkov.SashasPazzle
 typeset -A LOCALES=(en en_US ru ru_RU de de_DE fr fr_FR es es_ES it it_IT pt-BR pt_BR ja ja_JP ko ko_KR zh-Hans zh_CN)
 LOCALE=${LOCALES[$LANGUAGE]:-en_US}
-STAGES=(library board scattered hint completed dark settings)
+# Upload order: the first three show in search results, so a board mid-solve
+# leads. Files are numbered so Finder sorts them the way they go in; `board`
+# (an empty table under the faint guide) is left out on purpose.
+STAGES=(hint library completed scattered dark settings)
 
 # Cutting a big puzzle on a freshly booted simulator can outlast any fixed
 # sleep, so wait until two thumbnails two seconds apart match (capped for
@@ -58,13 +61,16 @@ for DEVICE in "iPhone 17 Pro Max" "iPad Pro 13-inch (M5)"; do
 
   DIR="$OUT/${DEVICE// /-}"
   mkdir -p "$DIR"
+  rm -f "$DIR"/*.png
+  N=0
   for STAGE in $STAGES; do
+    N=$((N + 1))
     xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
     xcrun simctl launch "$UDID" $BUNDLE --stage "$STAGE" --clear-saves \
       -AppleLanguages "($LANGUAGE)" -onboarding YES -appearance light >/dev/null
     settle "$UDID"
-    xcrun simctl io "$UDID" screenshot "$DIR/$STAGE.png" >/dev/null 2>&1
-    echo "$DIR/$STAGE.png"
+    xcrun simctl io "$UDID" screenshot "$DIR/$N-$STAGE.png" >/dev/null 2>&1
+    echo "$DIR/$N-$STAGE.png"
   done
   xcrun simctl status_bar "$UDID" clear >/dev/null
   if [[ -n "$PREVIOUS_LOCALE" && "$PREVIOUS_LOCALE" != "$LOCALE" && -z "${KEEP_SIM_LANGUAGE:-}" ]]; then

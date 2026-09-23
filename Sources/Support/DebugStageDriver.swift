@@ -1,5 +1,8 @@
 #if DEBUG
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// Debug-only harness that drives the app into a named state at launch.
 ///
@@ -18,10 +21,30 @@ enum DebugStageDriver {
         return CommandLine.arguments[safe: index + 1]
     }
 
+    /// `--window-size 1440x900`, in points.
+    static var requestedWindowSize: CGSize? {
+        guard let index = CommandLine.arguments.firstIndex(of: "--window-size"),
+              let value = CommandLine.arguments[safe: index + 1] else { return nil }
+        let parts = value.split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return nil }
+        return CGSize(width: parts[0], height: parts[1])
+    }
+
     static func run(model: AppModel) async {
         guard let stage = requestedStage else { return }
         if CommandLine.arguments.contains("--clear-saves") { model.deleteAllSaves() }
         await settle(0.6)
+        #if os(macOS)
+        // Mac store screenshots must be exactly 2880×1800 (or 2560×1600):
+        // a 1440×900 pt window, title bar included, which is what
+        // `screencapture -l` captures, doubled on a Retina display.
+        if let size = requestedWindowSize, let window = NSApp.windows.first(where: \.isVisible) {
+            let top = window.frame.maxY
+            window.setFrame(NSRect(x: window.frame.minX, y: top - size.height,
+                                   width: size.width, height: size.height), display: true)
+            await settle(0.4)
+        }
+        #endif
 
         guard let picture = model.library.builtIn.first(where: { $0.id == "bundled.city_Riomaggiore Harbour" })
                 ?? model.library.builtIn.first else { return }
@@ -121,6 +144,31 @@ enum DebugStageDriver {
 
     private static func settle(_ seconds: Double) async {
         try? await Task.sleep(for: .seconds(seconds))
+    }
+}
+
+/// A stage run is a photo shoot, not a game. It keeps its saves, photos and
+/// statistics in a scratch directory and its settings in a separate defaults
+/// domain, so `--clear-saves` or the `dark` stage never reach the player's own
+/// data — on the Mac the debug build shares the real app's container, and a
+/// screenshot session used to wipe its saved games.
+nonisolated enum StageSandbox {
+    static let isActive = ProcessInfo.processInfo.arguments.contains("--stage")
+
+    static let directory: URL = {
+        let url = URL.temporaryDirectory.appending(path: "JigsawPuzzle-stage", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }()
+
+    /// Fresh every launch, seeded from the command line (`-appearance light`,
+    /// `-onboarding YES`), so one stage's settings never leak into the next.
+    static func makeDefaults() -> UserDefaults {
+        let name = "JigsawPuzzle.stage"
+        guard let suite = UserDefaults(suiteName: name) else { return .standard }
+        suite.removePersistentDomain(forName: name)
+        suite.register(defaults: UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain))
+        return suite
     }
 }
 #endif

@@ -21,6 +21,9 @@ final class PhotoLibraryStore {
     var all: [LibraryItem] { userItems + builtIn }
 
     nonisolated static let containerDirectory: URL = {
+        #if DEBUG
+        if StageSandbox.isActive { return StageSandbox.directory }
+        #endif
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL.temporaryDirectory
         let url = base.appending(path: "JigsawPuzzle", directoryHint: .isDirectory)

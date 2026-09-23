@@ -12,7 +12,11 @@ final class AppModel {
         case game
     }
 
+    #if DEBUG
+    let settings = StageSandbox.isActive ? AppSettings(defaults: StageSandbox.makeDefaults()) : AppSettings()
+    #else
     let settings = AppSettings()
+    #endif
     let library = PhotoLibraryStore()
     let stats = PlayerStats()
     /// Shared so the menu bar can drive zoom and fit without reaching into views.
