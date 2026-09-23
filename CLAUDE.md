@@ -12,7 +12,7 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **65 tests in 8 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **66 tests in 8 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
@@ -215,8 +215,14 @@ There is no way to read back a live SwiftUI window — `cacheDisplay` and
   `completed`, `huge`, `hugeSolved`. `--tray-trailing` forces the landscape
   layout on a portrait simulator (there is no `simctl` rotate); add
   `-AppleLanguages "(en)" -onboarding YES -appearance light` to pin the rest.
+  On the Mac, `--window-size 1440x900` sets the window in points. A stage run
+  lives in `StageSandbox`: a scratch data directory and a throwaway defaults
+  domain, so `--clear-saves` and the `dark` stage never touch the player's
+  real saves or settings (the Mac debug build shares the release container).
 - **Store screenshots**: `Scripts/store-screenshots.sh [lang]` walks the stages
-  on the iPhone 17 Pro Max and iPad Pro 13" simulators into `docs/store/`.
+  on the iPhone 17 Pro Max and iPad Pro 13" simulators, and
+  `Scripts/mac-screenshots.sh [lang]` captures a 2880×1800 Mac window, into
+  `docs/store/<lang>/`, numbered in upload order.
 - **Screenshots**: on macOS capture the window only (find its number via
   `CGWindowListCopyWindowInfo`, then `screencapture -o -l <id>`) — a full-screen
   grab exposes the user's desktop. On iOS use `xcrun simctl io <device> screenshot`.

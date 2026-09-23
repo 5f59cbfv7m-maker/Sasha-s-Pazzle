@@ -66,6 +66,7 @@ final class GameSession {
     @ObservationIgnored private var runningSince: Date?
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var autosaveTask: Task<Void, Never>?
+    @ObservationIgnored private var effectsTask: Task<Void, Never>?
     @ObservationIgnored private var undoStack: [PuzzleState] = []
     @ObservationIgnored private var redoStack: [PuzzleState] = []
     @ObservationIgnored private var paths: [CGPath?] = []
@@ -113,6 +114,7 @@ final class GameSession {
     deinit {
         ticker?.cancel()
         autosaveTask?.cancel()
+        effectsTask?.cancel()
     }
 
     var boardRect: CGRect { CGRect(origin: .zero, size: geometry.boardSize) }
@@ -306,6 +308,7 @@ final class GameSession {
                 ? (state.groups[outcome.group]?.members ?? [])
                 : outcome.connectedPieces
             for piece in pieces { flashes[piece] = now }
+            scheduleEffectsExpiry()
         }
         if outcome.didComplete { finish() }
         scheduleAutosave()
@@ -338,6 +341,7 @@ final class GameSession {
             let now = Date.now
             for connected in outcome.connectedPieces { flashes[connected] = now }
             flashes[piece] = now
+            scheduleEffectsExpiry()
         }
         if outcome.didComplete { finish() }
         scheduleAutosave()
@@ -383,11 +387,32 @@ final class GameSession {
         guard let piece = candidate else { return }
         selectedPiece = piece
         hint = Hint(piece: piece, expires: .now.addingTimeInterval(3))
+        scheduleEffectsExpiry()
     }
 
     func clearExpiredEffects(now: Date = .now) {
         if let hint, hint.expires < now { self.hint = nil }
         flashes = flashes.filter { now.timeIntervalSince($0.value) < Self.flashDuration }
+        scheduleEffectsExpiry()
+    }
+
+    /// Flashes and the hint only carry an expiry date; something has to drop
+    /// them once it passes. Without this `needsAnimationTicks` stayed true
+    /// after the first snap and the board redrew at 120 Hz for the rest of
+    /// the game.
+    private func scheduleEffectsExpiry() {
+        effectsTask?.cancel()
+        let deadlines = flashes.values.map { $0.addingTimeInterval(Self.flashDuration) }
+            + [hint?.expires].compactMap { $0 }
+        guard let next = deadlines.min() else {
+            effectsTask = nil
+            return
+        }
+        effectsTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(max(0, next.timeIntervalSinceNow) + 0.05))
+            guard !Task.isCancelled, let self else { return }
+            self.clearExpiredEffects()
+        }
     }
 
     static let flashDuration: TimeInterval = 0.85

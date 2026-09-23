@@ -307,6 +307,21 @@ struct SessionTests {
         #expect(session.state == before, "a hint must never move a piece")
     }
 
+    @Test("A snap flash expires, so the board stops redrawing")
+    func flashesExpire() async throws {
+        let session = makeSession()
+        session.startForTesting()
+        let cell = session.geometry.cellSize
+        _ = session.placePieceFromTray(0, at: CGPoint(x: cell.width / 2, y: cell.height / 2),
+                                       viewScale: 1, assist: .standard)
+        #expect(!session.flashes.isEmpty)
+        #expect(session.needsAnimationTicks)
+
+        try await Task.sleep(for: .seconds(GameSession.flashDuration + 0.4))
+        #expect(session.flashes.isEmpty)
+        #expect(!session.needsAnimationTicks, "an idle board must let its timeline pause")
+    }
+
     @Test("Solving marks the session complete and stops the clock")
     func solvingCompletes() async throws {
         let session = makeSession(pieces: 12)
