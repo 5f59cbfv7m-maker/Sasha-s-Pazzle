@@ -20,7 +20,19 @@ enum DebugStageDriver {
 
     static func run(model: AppModel) async {
         guard let stage = requestedStage else { return }
-        if CommandLine.arguments.contains("--clear-saves") { model.deleteAllSaves() }
+        // Stats too: otherwise every staged solve adds one, and the tenth
+        // language's screenshots show "31 puzzles completed".
+        if CommandLine.arguments.contains("--clear-saves") {
+            model.deleteAllSaves()
+            model.stats.reset()
+        }
+        #if os(macOS)
+        // Mac App Store screenshots are 16:10; 1440×900 pt is one of the
+        // accepted sizes at 1× and doubles to 2880×1800 on a Retina screen.
+        if let window = NSApp.windows.first(where: \.isVisible) {
+            window.setFrame(NSRect(x: 80, y: 80, width: 1440, height: 900), display: true)
+        }
+        #endif
         await settle(0.6)
 
         guard let picture = model.library.builtIn.first(where: { $0.id == "bundled.city_Riomaggiore Harbour" })
