@@ -7,8 +7,9 @@
 #   SIMULATORS= Scripts/store-screenshots.sh ja  # the Mac only
 #
 # Output is exactly the pixel size App Store Connect expects (1320×2868 and
-# 2064×2752), and 1440×900 for the Mac (2880×1800 on a Retina screen). Landscape iPad frames come from --tray-trailing, which forces the
-# landscape layout; rotate them 90° before uploading if you want true landscape.
+# 2064×2752), and 1440×900 for the Mac (2880×1800 on a Retina screen).
+# Landscape iPad frames come from --tray-trailing, which forces the landscape
+# layout; rotate them 90° before uploading if you want true landscape.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,7 +19,10 @@ DD="${TMPDIR:-/tmp}/sashas-puzzles-screenshots"
 BUNDLE=com.kirillrychkov.SashasPazzle
 typeset -A LOCALES=(en en_US ru ru_RU de de_DE fr fr_FR es es_ES it it_IT pt-BR pt_BR ja ja_JP ko ko_KR zh-Hans zh_CN)
 LOCALE=${LOCALES[$LANGUAGE]:-en_US}
-STAGES=(library board scattered hint completed dark settings)
+# Upload order: the first three show in search results, so a board mid-solve
+# leads. Files are numbered so Finder sorts them the way they go in; `board`
+# (an empty table under the faint guide) is left out on purpose.
+STAGES=(hint library completed scattered dark settings)
 
 # Cutting a big puzzle on a freshly booted simulator can outlast any fixed
 # sleep, so wait until two thumbnails two seconds apart match (capped for
@@ -62,13 +66,16 @@ for DEVICE in ${(s:,:)${SIMULATORS-iPhone 17 Pro Max,iPad Pro 13-inch (M5)}}; do
 
   DIR="$OUT/${DEVICE// /-}"
   mkdir -p "$DIR"
+  rm -f "$DIR"/*.png
+  N=0
   for STAGE in $STAGES; do
+    N=$((N + 1))
     xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
     xcrun simctl launch "$UDID" $BUNDLE --stage "$STAGE" --clear-saves \
       -AppleLanguages "($LANGUAGE)" -onboarding YES -appearance light >/dev/null
     settle xcrun simctl io "$UDID" screenshot
-    xcrun simctl io "$UDID" screenshot "$DIR/$STAGE.png" >/dev/null 2>&1
-    echo "$DIR/$STAGE.png"
+    xcrun simctl io "$UDID" screenshot "$DIR/$N-$STAGE.png" >/dev/null 2>&1
+    echo "$DIR/$N-$STAGE.png"
   done
   xcrun simctl status_bar "$UDID" clear >/dev/null
   if [[ -n "$PREVIOUS_LOCALE" && "$PREVIOUS_LOCALE" != "$LOCALE" && -z "${KEEP_SIM_LANGUAGE:-}" ]]; then
@@ -87,7 +94,10 @@ xcodebuild -quiet -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle -configur
   PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE.screenshots CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= build
 DIR="$OUT/Mac"
 mkdir -p "$DIR"
+rm -f "$DIR"/*.png
+N=0
 for STAGE in $STAGES; do
+  N=$((N + 1))
   pkill -f "sashas-puzzles-screenshots/Build/" 2>/dev/null && sleep 1
   # A killed run leaves "no windows" as its saved state; ignore it. The
   # locale gives dates and numbers the screenshot language, like the simulators.
@@ -121,7 +131,7 @@ for STAGE in $STAGES; do
     NSRect(x: 0, y: 0, width: rep.pixelsWide, height: rep.pixelsHigh).fill()
     rep.draw(in: NSRect(x: 0, y: 0, width: rep.pixelsWide, height: rep.pixelsHigh))
     NSGraphicsContext.current?.flushGraphics()
-    try! out.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: a[2]))' "$DD/window.png" "$DIR/$STAGE.png"
-  echo "$DIR/$STAGE.png"
+    try! out.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: a[2]))' "$DD/window.png" "$DIR/$N-$STAGE.png"
+  echo "$DIR/$N-$STAGE.png"
 done
 pkill -f "sashas-puzzles-screenshots/Build/" 2>/dev/null || true

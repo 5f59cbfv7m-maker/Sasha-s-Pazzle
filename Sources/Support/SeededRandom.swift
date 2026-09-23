@@ -3,8 +3,8 @@ import Foundation
 
 /// Deterministic 64-bit generator (SplitMix64).
 ///
-/// Every visual aspect of a puzzle — edge shapes, shuffle order, procedural
-/// artwork — must be exactly reproducible from a stored seed. That keeps saved
+/// Every random aspect of a puzzle — edge shapes, shuffle order, scatter — must
+/// be exactly reproducible from a stored seed. That keeps saved
 /// games tiny: we persist one `UInt64` instead of thousands of Bézier control
 /// points, and it lets us regenerate identical geometry on any device.
 nonisolated struct SplitMix64: RandomNumberGenerator, Sendable {

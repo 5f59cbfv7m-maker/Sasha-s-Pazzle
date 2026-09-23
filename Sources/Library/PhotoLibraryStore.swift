@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// The picture library: built-in generated art plus the user's own photos.
+/// The picture library: the bundled photographs plus the user's own photos.
 ///
 /// Photos are stored as optimised JPEG copies inside the app container and
 /// indexed by a small JSON manifest. Two deliberate choices:
@@ -21,6 +21,9 @@ final class PhotoLibraryStore {
     var all: [LibraryItem] { userItems + builtIn }
 
     nonisolated static let containerDirectory: URL = {
+        #if DEBUG
+        if StageSandbox.isActive { return StageSandbox.directory }
+        #endif
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL.temporaryDirectory
         let url = base.appending(path: "JigsawPuzzle", directoryHint: .isDirectory)

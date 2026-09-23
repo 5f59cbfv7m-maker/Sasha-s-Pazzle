@@ -20,8 +20,8 @@ struct PersistenceTests {
         let group = state.placeFromTray(1, translation: CGPoint(x: 3, y: 3))
         _ = state.settle(group: group, tolerance: 20)
 
-        return GameSnapshot(id: id, itemID: "gen.0.3", itemTitle: "Nebula 4",
-                            source: .generated(family: .nebula, seed: 12), imageAspect: 1.5,
+        return GameSnapshot(id: id, itemID: "bundled.space_Milky Way", itemTitle: "Milky Way",
+                            source: .bundled(fileName: "space_Milky Way.jpg"), imageAspect: 1.5,
                             puzzleAspect: .landscape32, targetPieces: 24, columns: 6, rows: 4,
                             seed: 0xABCDEF, elapsed: 91.5, state: state,
                             updatedAt: .now, isComplete: false)
@@ -81,6 +81,25 @@ struct PersistenceTests {
         #expect(store.load().isEmpty)
     }
 
+    @Test("A save this build cannot read drops only that game")
+    func unreadableGameIsSkipped() throws {
+        let directory = try temporaryDirectory()
+        let store = SaveStore(directory: directory)
+        try store.save(sampleSnapshot(id: "old"))
+        try store.save(sampleSnapshot(id: "new"))
+
+        // Rewrite one entry with the source the retired artwork generators used.
+        let url = directory.appending(path: "savedGames.json")
+        var archive = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        var games = try #require(archive["games"] as? [[String: Any]])
+        let index = try #require(games.firstIndex { $0["id"] as? String == "old" })
+        games[index]["source"] = ["generated": ["family": 0, "seed": 12]]
+        archive["games"] = games
+        try JSONSerialization.data(withJSONObject: archive).write(to: url)
+
+        #expect(store.load().map(\.id) == ["new"])
+    }
+
     @Test("Geometry regenerates identically from a restored seed")
     func geometryRebuildsFromSnapshot() throws {
         let snapshot = sampleSnapshot()
@@ -99,8 +118,8 @@ struct PersistenceTests {
     @Test("Library items round trip, including their source")
     func libraryItemRoundTrip() throws {
         let items = [
-            LibraryItem(id: "gen.5.2", title: "Canyon 3", category: .mountains,
-                        source: .generated(family: .canyon, seed: 9),
+            LibraryItem(id: "bundled.mountains_Canyon", title: "Canyon", category: .mountains,
+                        source: .bundled(fileName: "mountains_Canyon.jpg"),
                         addedAt: .distantPast, aspect: 1.5),
             LibraryItem(id: "user.abc.jpg", title: "Holiday", category: .mine,
                         source: .imported(fileName: "abc.jpg"), addedAt: .now, aspect: 0.75)
@@ -112,15 +131,12 @@ struct PersistenceTests {
         #expect(!restored[0].isUserPhoto)
     }
 
-    @Test("The built-in catalogue is the bundled photos plus the curated selection, every picture unique")
+    @Test("The built-in catalogue is the bundled photos, every picture unique")
     func catalogueIsCuratedAndUnique() {
         let items = LibraryCatalog.builtIn()
-        #expect(items.count == LibraryCatalog.bundled().count + LibraryCatalog.selection.count)
+        #expect(items.count == LibraryCatalog.bundled().count)
         #expect(items.count == LibraryCatalog.count)
         #expect(Set(items.map(\.id)).count == items.count)
-        for (family, variant) in LibraryCatalog.selection {
-            #expect((0..<ArtFamily.variantsPerFamily).contains(variant), "\(family) variant \(variant) is out of range")
-        }
         // Every category is represented.
         for category in ArtCategory.allCases where category != .mine {
             #expect(items.contains { $0.category == category }, "no pictures for \(category)")
@@ -133,7 +149,7 @@ struct PersistenceTests {
 struct PhotoLibraryTests {
 
     private func sampleJPEG(width: Int, height: Int) throws -> Data {
-        let context = try #require(ArtToolkit.makeContext(size: CGSize(width: width, height: height)))
+        let context = try #require(CGContext.bitmap(size: CGSize(width: width, height: height)))
         context.setFillColor(CGColor(red: 0.9, green: 0.3, blue: 0.2, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         let image = RenderedImage(cgImage: try #require(context.makeImage()))

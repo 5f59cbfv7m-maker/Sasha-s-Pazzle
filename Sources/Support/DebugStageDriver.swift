@@ -135,4 +135,29 @@ enum DebugStageDriver {
         try? await Task.sleep(for: .seconds(seconds))
     }
 }
+
+/// A stage run is a photo shoot, not a game. It keeps its saves, photos and
+/// statistics in a scratch directory and its settings in a separate defaults
+/// domain, so `--clear-saves` or the `dark` stage never reach the player's own
+/// data — on the Mac the debug build shares the real app's container, and a
+/// screenshot session used to wipe its saved games.
+nonisolated enum StageSandbox {
+    static let isActive = ProcessInfo.processInfo.arguments.contains("--stage")
+
+    static let directory: URL = {
+        let url = URL.temporaryDirectory.appending(path: "JigsawPuzzle-stage", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }()
+
+    /// Fresh every launch, seeded from the command line (`-appearance light`,
+    /// `-onboarding YES`), so one stage's settings never leak into the next.
+    static func makeDefaults() -> UserDefaults {
+        let name = "JigsawPuzzle.stage"
+        guard let suite = UserDefaults(suiteName: name) else { return .standard }
+        suite.removePersistentDomain(forName: name)
+        suite.register(defaults: UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain))
+        return suite
+    }
+}
 #endif

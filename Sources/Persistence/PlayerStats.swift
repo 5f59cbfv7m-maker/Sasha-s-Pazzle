@@ -69,10 +69,6 @@ final class PlayerStats {
 
     func isSolved(_ itemID: String) -> Bool { records.contains { $0.itemID == itemID } }
 
-    func solvedCount(in category: ArtCategory) -> Int {
-        Set(records.filter { $0.category == category }.map(\.itemID)).count
-    }
-
     // MARK: Daily puzzle
 
     /// A game counts as that day's daily puzzle when it is the day's picture at

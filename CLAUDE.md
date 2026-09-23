@@ -27,7 +27,6 @@ mismatch — it is deliberate.
 | Path | Role |
 |---|---|
 | `Sources/Engine/` | `EdgeProfile`, `PuzzleGeometry`, `PuzzleState` — pure, `Sendable`, no SwiftUI |
-| `Sources/Art/` | Procedural picture generators, kept for saved games; `LibraryCatalog.selection` is empty — the library is the photos in `Resources/Pictures/` |
 | `Sources/Render/` | `PieceTextureStore` — parallel bitmap cutting with the bevel |
 | `Sources/Interaction/` | `Viewport`, `BoardEventView` (AppKit/UIKit input bridge) |
 | `Sources/Game/` | `GameSession` plus the playing screen |
@@ -35,7 +34,7 @@ mismatch — it is deliberate.
 | `Sources/Persistence/PlayerStats.swift` | Solved-game records; streak, best times, achievements and the weekly chart are all derived from them |
 | `Sources/Support/Theme.swift` | Design tokens (colours, type), shared controls (`PillButton`, `RoundIconButton`, `PillSegments`), the `PuzzleMark` logo |
 
-`Engine/` and `Art/` know nothing about SwiftUI. Keep it that way — that is what
+`Engine/` knows nothing about SwiftUI. Keep it that way — that is what
 makes them unit-testable and safe to run off the main thread.
 
 ## Invariants — breaking these breaks the game
@@ -56,8 +55,6 @@ makes them unit-testable and safe to run off the main thread.
   the model.
 - **Geometry regenerates from `(seed, columns, rows)`.** Saves must never store
   control points.
-- **Every artwork ends with `ArtToolkit.detailPass`.** Without high-frequency
-  texture an 800-piece puzzle is unsolvable; a test enforces it.
 
 ## Traps already paid for
 
@@ -109,13 +106,16 @@ because a fresh `CTFont` per call is a new `Font` value every render.
 **Tests must inject a temp `SaveStore`**, otherwise they write into the player's
 real saved games. `GameSession.init(..., saveStore:)` exists for this.
 
+**Saves decode game by game.** The procedural artwork generators (`Sources/Art/`,
+`ImageSource.generated`) were removed before 1.0; a save that still names one
+fails to decode. `SaveStore` skips just that entry — decoding the archive as a
+whole used to mean one unreadable game erased every save on the device. Keep it
+that way whenever an `ImageSource` case or a snapshot field goes away.
+
 **Core Image disappointments.** `CIKMeans` + `CIPalettize` produced unusable mush
 and `CIEdges` was too weak to survive a multiply blend. The icon pipeline uses a
 hand-rolled k-means quantiser and a thresholded Sobel instead. Do not "simplify"
 it back. Never `CIColorPosterize` with a saturation boost — it shreds hue.
-
-**Hoist `PerlinNoise` out of per-pixel closures.** One construction per pixel
-made artwork generation 50× slower; it allocates a 512-entry table.
 
 **Piece textures crop the source**, they do not draw the whole image under a
 clip. Cropping a `CGImage` is free; drawing is not.
@@ -215,11 +215,16 @@ There is no way to read back a live SwiftUI window — `cacheDisplay` and
   `completed`, `huge`, `hugeSolved`. `--tray-trailing` forces the landscape
   layout on a portrait simulator (there is no `simctl` rotate); add
   `-AppleLanguages "(en)" -onboarding YES -appearance light` to pin the rest.
+  On the Mac a stage run sizes the window to 1440×900 pt. Any stage run also
+  lives in `StageSandbox`: a scratch data directory and a throwaway defaults
+  domain, so `--clear-saves` and the `dark` stage never touch the player's
+  real saves or settings, even from a debug build that shares the release
+  container.
 - **Store screenshots**: `Scripts/store-screenshots.sh [lang]` walks the stages
   on the iPhone 17 Pro Max and iPad Pro 13" simulators and the Mac app into
-  `docs/store/`. The Mac build uses bundle ID `…SashasPazzle.screenshots` so
-  `--clear-saves` never touches the family's real container; `SIMULATORS=`
-  (empty) shoots the Mac only.
+  `docs/store/<lang>/`, numbered in upload order. The Mac build uses bundle
+  ID `…SashasPazzle.screenshots` so `--clear-saves` never touches the family's
+  real container; `SIMULATORS=` (empty) shoots the Mac only.
 - **Screenshots**: on macOS capture the window only (find its number via
   `CGWindowListCopyWindowInfo`, then `screencapture -o -l <id>`) — a full-screen
   grab exposes the user's desktop. On iOS use `xcrun simctl io <device> screenshot`.

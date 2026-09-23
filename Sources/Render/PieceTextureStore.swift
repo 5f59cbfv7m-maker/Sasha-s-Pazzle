@@ -58,12 +58,6 @@ final class PieceTextureStore {
         piece >= 0 && piece < textures.count ? textures[piece] : nil
     }
 
-    /// Board-space rectangle a piece's texture covers when the piece is solved.
-    func solvedRect(for piece: Int, geometry: PuzzleGeometry) -> CGRect {
-        guard piece < localBounds.count else { return geometry.cellFrame(of: piece) }
-        return localBounds[piece].offsetBy(geometry.solvedOrigin(of: piece))
-    }
-
     /// Largest pixel scale that fits the budget for this geometry.
     static func affordableScale(for geometry: PuzzleGeometry, desired: CGFloat) -> CGFloat {
         let cell = geometry.cellSize
@@ -161,7 +155,7 @@ final class PieceTextureStore {
         let pixelSize = CGSize(width: (bounds.width * pixelScale).rounded(.up),
                                height: (bounds.height * pixelScale).rounded(.up))
         guard pixelSize.width >= 2, pixelSize.height >= 2,
-              let context = ArtToolkit.makeContext(size: pixelSize) else { return nil }
+              let context = CGContext.bitmap(size: pixelSize) else { return nil }
 
         // Board units with y running downward, origin at the piece's cell corner.
         context.translateBy(x: 0, y: pixelSize.height)

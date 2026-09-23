@@ -90,40 +90,71 @@ struct HomeView: View {
 
     // MARK: - Sections
 
+    /// On a phone the title and four buttons cannot share one row — the
+    /// name came out as "Sasha's Puzz…" even on the widest iPhone — so the
+    /// buttons move up into a bar of their own and the title sits under
+    /// them, like a large navigation title.
     private var header: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "puzzlepiece.fill")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Theme.onAccent)
-                .frame(width: 44, height: 44)
-                .background(Theme.accent, in: Circle())
-                .shadow(color: .black.opacity(0.16), radius: 5, y: 3)
-            Text("Sasha's Puzzles")
-                .font(Theme.display(isCompact ? 26 : 34))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Spacer()
-            let chip: CGFloat = isCompact ? 40 : 44
-            HStack(spacing: isCompact ? 6 : 8) {
-                PhotosPicker(selection: $photoSelection, maxSelectionCount: 20, matching: .images) {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.system(size: chip * 0.42, weight: .bold))
-                        .foregroundStyle(Theme.muted)
-                        .frame(width: chip, height: chip)
-                        .background(Theme.chip, in: Circle())
+        Group {
+            if isCompact {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Spacer()
+                        headerButtons
+                    }
+                    HStack(spacing: 12) {
+                        headerMark
+                        headerTitle
+                    }
                 }
-                .buttonStyle(PressableStyle())
-                .accessibilityLabel(Text("Add Photo"))
-                RoundIconButton(symbol: "folder.badge.plus", size: chip) { isImportingFiles = true }
-                    .accessibilityLabel(Text("Import from Files"))
-                RoundIconButton(symbol: "person.fill", size: chip) { model.showProfile = true }
-                    .accessibilityLabel(Text("Profile"))
-                RoundIconButton(symbol: "gearshape", size: chip) { model.showSettings = true }
-                    .accessibilityLabel(Text("Settings"))
+            } else {
+                HStack(spacing: 14) {
+                    headerMark
+                    headerTitle
+                    Spacer()
+                    headerButtons
+                }
             }
         }
         .padding(.horizontal, gutter)
-        .padding(.top, 10)
+        .padding(.top, isCompact ? 4 : 10)
+    }
+
+    private var headerMark: some View {
+        Image(systemName: "puzzlepiece.fill")
+            .font(.system(size: 22, weight: .bold))
+            .foregroundStyle(Theme.onAccent)
+            .frame(width: 44, height: 44)
+            .background(Theme.accent, in: Circle())
+            .shadow(color: .black.opacity(0.16), radius: 5, y: 3)
+    }
+
+    private var headerTitle: some View {
+        Text("Sasha's Puzzles")
+            .font(Theme.display(isCompact ? 30 : 34))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    private var headerButtons: some View {
+        let chip: CGFloat = isCompact ? 40 : 44
+        return HStack(spacing: isCompact ? 6 : 8) {
+            PhotosPicker(selection: $photoSelection, maxSelectionCount: 20, matching: .images) {
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: chip * 0.42, weight: .bold))
+                    .foregroundStyle(Theme.muted)
+                    .frame(width: chip, height: chip)
+                    .background(Theme.chip, in: Circle())
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel(Text("Add Photo"))
+            RoundIconButton(symbol: "folder.badge.plus", size: chip) { isImportingFiles = true }
+                .accessibilityLabel(Text("Import from Files"))
+            RoundIconButton(symbol: "person.fill", size: chip) { model.showProfile = true }
+                .accessibilityLabel(Text("Profile"))
+            RoundIconButton(symbol: "gearshape", size: chip) { model.showSettings = true }
+                .accessibilityLabel(Text("Settings"))
+        }
     }
 
     private var dailyCard: some View {

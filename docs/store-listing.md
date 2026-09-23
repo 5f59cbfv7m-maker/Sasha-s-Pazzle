@@ -14,13 +14,18 @@
 молча. Промо-текст можно менять без новой версии приложения, описание —
 нельзя.
 
+Ключевые слова не повторяют слов из названия и подзаголовка: App Store
+индексирует их отдельно и сам складывает слова из всех трёх полей в
+запросы («jigsaw» + «Puzzles» находит «jigsaw puzzles»), так что повтор
+только съедает место.
+
 ## English (U.S.)
 
 **Subtitle:** Jigsaws from your own photos
 
 **Promotional text:** A calm jigsaw table with a new puzzle every day. Turn any photo into a puzzle — 12 to 800 pieces, fully offline.
 
-**Keywords:** `jigsaw,puzzle,puzzles,photo,relax,daily,offline,family,kids,pieces,calm,picture`
+**Keywords:** `jigsaw,daily,relax,offline,family,kids,brain,mindful,zen,nature,animals,landscape,art,picture,calm`
 
 **Description:**
 
@@ -54,7 +59,7 @@
 
 **Promotional text:** Спокойный стол для пазлов и новый пазл каждый день. Любое фото становится пазлом — от 12 до 800 деталей, полностью офлайн.
 
-**Keywords:** `пазл,пазлы,головоломка,фото,картинки,релакс,офлайн,семья,дети,детали,спокойствие`
+**Keywords:** `пазл,головоломка,мозаика,фото,картинки,антистресс,релакс,офлайн,семья,дети,природа,животные,пейзаж`
 
 **Description:**
 
@@ -88,7 +93,7 @@
 
 **Promotional text:** Ein ruhiger Puzzletisch und jeden Tag ein neues Puzzle. Jedes Foto wird zum Puzzle – 12 bis 800 Teile, komplett offline.
 
-**Keywords:** `puzzle,puzzles,foto,entspannen,täglich,offline,familie,kinder,teile,bilder,ruhe,legespiel`
+**Keywords:** `legespiel,täglich,entspannen,offline,familie,kinder,bilder,gehirnjogging,natur,tiere,landschaft`
 
 **Description:**
 
@@ -122,7 +127,7 @@
 
 **Promotional text:** Une table de puzzle paisible et un nouveau puzzle chaque jour. N'importe quelle photo devient un puzzle : de 12 à 800 pièces, hors ligne.
 
-**Keywords:** `puzzle,puzzles,casse-tête,photo,détente,quotidien,famille,enfants,pièces,calme,image`
+**Keywords:** `casse-tête,jeu,détente,quotidien,hors,ligne,famille,enfants,pièces,image,zen,nature,animaux,paysage`
 
 **Description:**
 
@@ -156,7 +161,7 @@
 
 **Promotional text:** Una mesa de rompecabezas tranquila y un puzle nuevo cada día. Cualquier foto se convierte en rompecabezas: de 12 a 800 piezas, sin conexión.
 
-**Keywords:** `puzle,puzzle,rompecabezas,foto,relax,diario,offline,familia,niños,piezas,calma,imagen`
+**Keywords:** `puzle,juego,relax,diario,offline,familia,niños,piezas,calma,imagen,mente,naturaleza,animales,paisaje`
 
 **Description:**
 
@@ -190,7 +195,7 @@
 
 **Promotional text:** Un tavolo da puzzle tranquillo e un puzzle nuovo ogni giorno. Qualsiasi foto diventa un puzzle: da 12 a 800 pezzi, completamente offline.
 
-**Keywords:** `puzzle,rompicapo,foto,relax,giornaliero,offline,famiglia,bambini,pezzi,calma,immagine`
+**Keywords:** `rompicapo,gioco,relax,giornaliero,offline,famiglia,bambini,pezzi,immagini,natura,animali,paesaggi`
 
 **Description:**
 
@@ -224,7 +229,7 @@
 
 **Promotional text:** Uma mesa de quebra-cabeça tranquila e um novo desafio todo dia. Qualquer foto vira quebra-cabeça: de 12 a 800 peças, totalmente offline.
 
-**Keywords:** `quebra-cabeça,puzzle,foto,relaxar,diário,offline,família,crianças,peças,calma,imagem`
+**Keywords:** `quebra-cabeça,jogo,relaxar,diário,offline,família,crianças,peças,imagem,natureza,animais,paisagem`
 
 **Description:**
 
@@ -258,7 +263,7 @@
 
 **Promotional text:** 静かなパズルテーブルと、毎日届く新しいパズル。どんな写真もパズルになります。12〜800ピース、完全オフライン。
 
-**Keywords:** `ジグソーパズル,パズル,写真,リラックス,毎日,オフライン,家族,子ども,ピース,絵合わせ`
+**Keywords:** `パズル,脳トレ,暇つぶし,癒し,リラックス,毎日,オフライン,家族,子ども,知育,ピース,絵合わせ,風景,動物,自然,大人`
 
 **Description:**
 
@@ -292,7 +297,7 @@
 
 **Promotional text:** 조용한 퍼즐 테이블과 매일 새로 도착하는 퍼즐. 어떤 사진이든 퍼즐이 됩니다. 12~800조각, 완전 오프라인.
 
-**Keywords:** `직소퍼즐,퍼즐,사진,휴식,매일,오프라인,가족,아이,조각,그림맞추기`
+**Keywords:** `직소퍼즐,퍼즐게임,사진퍼즐,두뇌,힐링,휴식,매일,오프라인,가족,아이,조각,그림맞추기,풍경,동물,자연`
 
 **Description:**
 
@@ -326,7 +331,7 @@
 
 **Promotional text:** 安静的拼图桌，每天一张新拼图。任何照片都能变成拼图——12 到 800 片，完全离线。
 
-**Keywords:** `拼图,拼图游戏,照片,放松,每日,离线,家庭,儿童,碎片,益智,图片`
+**Keywords:** `拼图游戏,益智,休闲,解压,放松,每日,离线,家庭,儿童,碎片,图片,风景,动物,自然,智力`
 
 **Description:**
 
