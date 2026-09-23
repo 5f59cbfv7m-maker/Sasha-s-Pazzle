@@ -51,6 +51,18 @@ final class AppSettings {
     /// Draw a thin outline around every piece; helps on busy pictures.
     var showPieceOutlines: Bool { didSet { write(showPieceOutlines, "outlines") } }
     var hasSeenOnboarding: Bool { didSet { write(hasSeenOnboarding, "onboarding") } }
+    /// Asked on the last onboarding step, editable in the profile. Capped so a
+    /// pasted paragraph cannot push the profile header off screen.
+    var playerName: String {
+        didSet {
+            if playerName.count > 24 { playerName = String(playerName.prefix(24)) }
+            write(playerName, "playerName")
+        }
+    }
+    var displayName: String {
+        let name = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? String(localized: "Player") : name
+    }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -67,6 +79,7 @@ final class AppSettings {
         defaultAspect = PuzzleAspect(rawValue: defaults.string(forKey: "aspect") ?? "") ?? .original
         showPieceOutlines = defaults.object(forKey: "outlines") as? Bool ?? true
         hasSeenOnboarding = defaults.bool(forKey: "onboarding")
+        playerName = defaults.string(forKey: "playerName") ?? ""
     }
 
     private func write(_ value: Any, _ key: String) { defaults.set(value, forKey: key) }

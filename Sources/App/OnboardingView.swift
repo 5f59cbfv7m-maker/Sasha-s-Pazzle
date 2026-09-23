@@ -1,8 +1,10 @@
 import SwiftUI
 
 /// Three steps on first launch; each shows the mechanic rather than describing it.
+/// The last one also asks the player's name, which can be left empty.
 struct OnboardingView: View {
     let onFinish: () -> Void
+    @Environment(AppSettings.self) private var settings
     @State private var step = 0
     @State private var pulse = false
 
@@ -16,6 +18,7 @@ struct OnboardingView: View {
     ]
 
     var body: some View {
+        @Bindable var settings = settings
         ZStack {
             Theme.bg
             Blob(size: 240).offset(x: 160, y: -260)
@@ -33,6 +36,17 @@ struct OnboardingView: View {
                     Text(Self.steps[step].text)
                         .font(Theme.body(16)).foregroundStyle(Theme.muted).lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
+                    if step == Self.steps.count - 1 {
+                        TextField("What should we call you?", text: $settings.playerName)
+                            .textFieldStyle(.plain)
+                            .font(Theme.body(17))
+                            .textContentType(.givenName)
+                            .submitLabel(.done)
+                            .onSubmit(onFinish)
+                            .padding(.horizontal, 18).padding(.vertical, 13)
+                            .background(Theme.surface, in: Capsule())
+                            .padding(.top, 10)
+                    }
                     HStack(spacing: 10) {
                         ForEach(0..<Self.steps.count, id: \.self) { index in
                             Capsule().fill(index == step ? Theme.accent : Theme.track)
@@ -54,7 +68,8 @@ struct OnboardingView: View {
                 .padding(EdgeInsets(top: 0, leading: 34, bottom: 34, trailing: 34))
             }
         }
-        .ignoresSafeArea()
+        // Not the keyboard's area: the name field has to rise above it.
+        .ignoresSafeArea(.container)
         .onAppear { pulse = true }
         #if os(macOS)
         .frame(minWidth: 520, minHeight: 700)

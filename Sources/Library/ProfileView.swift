@@ -27,14 +27,26 @@ struct ProfileView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 16) {
-            Text(String(localized: "Sasha").prefix(1))
+        @Bindable var settings = model.settings
+        return HStack(spacing: 16) {
+            Text(settings.displayName.prefix(1))
                 .font(Theme.display(26))
                 .foregroundStyle(Theme.onAccent)
                 .frame(width: 64, height: 64)
                 .background(Theme.accent, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
-                Text("Sasha").font(Theme.display(26))
+                // Tap the name to change it; empty shows "Player" as the placeholder.
+                HStack(spacing: 8) {
+                    TextField("Player", text: $settings.playerName)
+                        .textFieldStyle(.plain)
+                        .font(Theme.display(26))
+                        .textContentType(.givenName)
+                        .fixedSize()
+                        .accessibilityLabel(Text("Your name"))
+                    Image(systemName: "pencil").font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.faint)
+                        .accessibilityHidden(true)
+                }
                 Text(subtitle).font(Theme.body(14)).foregroundStyle(Theme.muted)
             }
             Spacer()

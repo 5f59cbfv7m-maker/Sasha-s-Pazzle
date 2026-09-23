@@ -142,6 +142,23 @@ struct PersistenceTests {
             #expect(items.contains { $0.category == category }, "no pictures for \(category)")
         }
     }
+
+    @Test("The player's name is capped, trimmed and falls back to a placeholder")
+    func playerName() throws {
+        let suite = "JigsawTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.displayName == String(localized: "Player"))
+        settings.playerName = "   "
+        #expect(settings.displayName == String(localized: "Player"))
+        settings.playerName = String(repeating: "Ж", count: 40)
+        #expect(settings.playerName.count == 24)
+        settings.playerName = " Маша "
+        #expect(settings.displayName == "Маша")
+        #expect(AppSettings(defaults: defaults).playerName == " Маша ")
+    }
 }
 
 @Suite("Photo library", .serialized)

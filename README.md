@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/platforms-macOS%2015%20%7C%20iOS%2018%20%7C%20iPadOS%2018-1B7FD1" alt="Platforms">
   <img src="https://img.shields.io/badge/Swift-6.0-F05138" alt="Swift 6.0">
   <img src="https://img.shields.io/badge/Xcode-16%2B-147EFB" alt="Xcode 16+">
-  <img src="https://img.shields.io/badge/tests-65%20passing-3FB950" alt="65 tests passing">
+  <img src="https://img.shields.io/badge/tests-66%20passing-3FB950" alt="66 tests passing">
   <img src="https://img.shields.io/badge/dependencies-none-8B949E" alt="No dependencies">
   <img src="https://img.shields.io/badge/offline-100%25-8B949E" alt="Works offline">
 </p>
@@ -318,7 +318,7 @@ Sources/
 ├── Persistence/  GameSnapshot, SaveStore, PlayerStats (achievements, streaks)
 ├── Support/      Theme (tokens, fonts, controls), SplitMix64, Feedback, debug driver
 └── Resources/    Assets.xcassets, Localizable.xcstrings, Fonts/
-Tests/            65 tests across 8 suites
+Tests/            66 tests across 8 suites
 ```
 
 The engine layer (`Engine/`) is `nonisolated` and `Sendable` and knows
@@ -387,7 +387,7 @@ resizing are handled by the same code path as rotation.
 
 ## Tests
 
-`Tests/` contains **65 tests in 8 suites** (Swift Testing), covering the areas the
+`Tests/` contains **66 tests in 8 suites** (Swift Testing), covering the areas the
 engine cannot be allowed to get wrong:
 
 grid selection · edge generation · edge matching between neighbours · flat

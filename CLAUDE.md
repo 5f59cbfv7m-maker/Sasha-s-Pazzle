@@ -12,7 +12,7 @@ xcodebuild -project JigsawPuzzle.xcodeproj -scheme JigsawPuzzle \
 ```
 
 Swap the destination for `platform=iOS Simulator,name=iPhone 17 Pro` or
-`name=iPad Pro 13-inch (M5)`. **65 tests in 8 suites must pass** before any change
+`name=iPad Pro 13-inch (M5)`. **66 tests in 8 suites must pass** before any change
 is called done. Grep the output for `^✔ Test run` — xcodebuild buries it in noise.
 
 `./Scripts/install-mac.sh [destination]` builds Release and drops the `.app`
